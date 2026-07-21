@@ -1,7 +1,7 @@
-from enum import Enum
+
 from operator import index
 from typing import final
-from sqlalchemy import ForeignKey, String
+from sqlalchemy import ForeignKey,Enum, String
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.models.base import Base

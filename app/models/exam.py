@@ -9,6 +9,8 @@ from app.models.base import Base
 
 from sqlalchemy.dialects.postgresql import JSONB
 
+from app.models.years import Year
+
 # ================== Админ часть
 
 @final
@@ -38,8 +40,7 @@ class ExamTargets(Base):
     exam_id: Mapped[int] = mapped_column(ForeignKey("exams.id", ondelete="CASCADE"))
 
     group_id: Mapped[int | None] = mapped_column(ForeignKey("groups.id"), nullable=True)
-    year_id: Mapped[int | None] = mapped_column(ForeignKey("years.id"), nullable=True)
-
+    year: Mapped[Year] = mapped_column(Enum(Year))
 
 @final 
 class QuestionType(enum.Enum):

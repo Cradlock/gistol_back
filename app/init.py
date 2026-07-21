@@ -25,7 +25,7 @@ async def create_admin(service: AuthService):
     admin_data = {
         "code":code,
         "password_hash": hash_password(raw_password),
-        "first_name":"Root admin",
+        "name":"Root admin",
         "role":UserRoleEnum.SUPERADMIN,
         "confirmed": True
     }

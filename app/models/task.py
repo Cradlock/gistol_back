@@ -5,9 +5,10 @@
 from datetime import datetime
 from typing import final
 
-from sqlalchemy import DateTime, ForeignKey, String
+from sqlalchemy import Enum, DateTime, ForeignKey, String
 from sqlalchemy.orm import Mapped, mapped_column
 from app.models.base import Base
+from app.models.years import Year
 
 @final
 class SituationsTask(Base):
@@ -42,8 +43,7 @@ class TaskTargets(Base):
     task_id: Mapped[int] = mapped_column(ForeignKey("situations_task.id", ondelete="CASCADE"))
 
     group_id: Mapped[int | None] = mapped_column(ForeignKey("groups.id"), nullable=True)
-    year_id: Mapped[int | None] = mapped_column(ForeignKey("years.id"), nullable=True)
-
+    year: Mapped[Year] = mapped_column(Enum(Year), nullable=True)
 
 
 

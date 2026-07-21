@@ -1,22 +1,23 @@
 from datetime import datetime, timedelta, timezone
 from typing import Dict
 
-from passlib.context import CryptContext
 
 from jose import jwt
 
 from app.core.config import settings
 
-pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
+
+import bcrypt
 
 def hash_password(password: str) -> str:
-    """Хеширование пароля (для регистрации / смены пароля)"""
-    return pwd_context.hash(password)
+    # Конвертируем в байты, обрезаем на всякий случай до 72 байт (ограничение bcrypt)
+    pwd_bytes = password.encode('utf-8')[:72]
+    hashed = bcrypt.hashpw(pwd_bytes, bcrypt.gensalt())
+    return hashed.decode('utf-8')
 
-def verify_password(plain_password: str, hashed_password: str | None) -> bool:
-    """Проверка введенного пароля с хешем из базы данных (для логина)"""
-    hashed_password = "" if hashed_password is None else hashed_password  
-    return pwd_context.verify(plain_password, hashed_password)
+def verify_password(plain_password: str, hashed_password: str) -> bool:
+    pwd_bytes = plain_password.encode('utf-8')[:72]
+    return bcrypt.checkpw(pwd_bytes, hashed_password.encode('utf-8'))
 
 def create_access_token(data : Dict) -> str:
     to_encode = data.copy()

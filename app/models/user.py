@@ -1,10 +1,10 @@
 from datetime import datetime
-from enum import Enum, IntEnum, unique
+from enum import IntEnum, unique
 from operator import index
 from typing import Optional, final
 from httpx._transports import default
 from pydantic import EmailStr
-from sqlalchemy import BigInteger, CheckConstraint, ForeignKey, Integer, String, func
+from sqlalchemy import Enum,BigInteger, CheckConstraint, ForeignKey, Integer, String, func
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 from app.models.base import Base
 

@@ -1,8 +1,8 @@
-"""init_db
+"""Initial migration
 
-Revision ID: 24bae542668c
+Revision ID: 05a1fb3ad9d5
 Revises: 
-Create Date: 2026-07-03 17:35:13.673217
+Create Date: 2026-07-21 13:11:53.369041
 
 """
 from typing import Sequence, Union
@@ -12,7 +12,7 @@ import sqlalchemy as sa
 from sqlalchemy.dialects import postgresql
 
 # revision identifiers, used by Alembic.
-revision: str = '24bae542668c'
+revision: str = '05a1fb3ad9d5'
 down_revision: Union[str, Sequence[str], None] = None
 branch_labels: Union[str, Sequence[str], None] = None
 depends_on: Union[str, Sequence[str], None] = None
@@ -32,9 +32,12 @@ def upgrade() -> None:
     op.create_table('groups',
     sa.Column('id', sa.Integer(), nullable=False),
     sa.Column('title', sa.String(length=100), nullable=False),
+    sa.Column('year', sa.Enum('FIRST', 'SECOND', 'THIRD', 'FOURTH', 'FIFTH', 'SIXTH', name='year'), nullable=False),
+    sa.Column('is_active', sa.Boolean(), nullable=False),
     sa.PrimaryKeyConstraint('id'),
     sa.UniqueConstraint('title')
     )
+    op.create_index(op.f('ix_groups_is_active'), 'groups', ['is_active'], unique=False)
     op.create_table('situations_task',
     sa.Column('id', sa.Integer(), nullable=False),
     sa.Column('title', sa.String(length=255), nullable=False),
@@ -42,20 +45,13 @@ def upgrade() -> None:
     sa.Column('duration_min', sa.Integer(), nullable=False),
     sa.PrimaryKeyConstraint('id')
     )
-    op.create_table('years',
-    sa.Column('id', sa.Integer(), nullable=False),
-    sa.Column('title', sa.String(length=100), nullable=False),
-    sa.PrimaryKeyConstraint('id'),
-    sa.UniqueConstraint('title')
-    )
     op.create_table('exam_targets',
     sa.Column('id', sa.Integer(), nullable=False),
     sa.Column('exam_id', sa.Integer(), nullable=False),
     sa.Column('group_id', sa.Integer(), nullable=True),
-    sa.Column('year_id', sa.Integer(), nullable=True),
+    sa.Column('year', sa.Enum('FIRST', 'SECOND', 'THIRD', 'FOURTH', 'FIFTH', 'SIXTH', name='year'), nullable=False),
     sa.ForeignKeyConstraint(['exam_id'], ['exams.id'], ondelete='CASCADE'),
     sa.ForeignKeyConstraint(['group_id'], ['groups.id'], ),
-    sa.ForeignKeyConstraint(['year_id'], ['years.id'], ),
     sa.PrimaryKeyConstraint('id')
     )
     op.create_table('questions',
@@ -70,30 +66,37 @@ def upgrade() -> None:
     sa.Column('id', sa.Integer(), nullable=False),
     sa.Column('task_id', sa.Integer(), nullable=False),
     sa.Column('group_id', sa.Integer(), nullable=True),
-    sa.Column('year_id', sa.Integer(), nullable=True),
+    sa.Column('year', sa.Enum('FIRST', 'SECOND', 'THIRD', 'FOURTH', 'FIFTH', 'SIXTH', name='year'), nullable=True),
     sa.ForeignKeyConstraint(['group_id'], ['groups.id'], ),
     sa.ForeignKeyConstraint(['task_id'], ['situations_task.id'], ondelete='CASCADE'),
-    sa.ForeignKeyConstraint(['year_id'], ['years.id'], ),
     sa.PrimaryKeyConstraint('id')
     )
     op.create_table('users',
-    sa.Column('is_admin', sa.Boolean(), nullable=False),
+    sa.Column('role', sa.Integer(), nullable=False),
     sa.Column('id', sa.Integer(), nullable=False),
-    sa.Column('name', sa.String(length=50), nullable=False),
-    sa.Column('surname', sa.String(length=50), nullable=False),
-    sa.Column('email', sa.String(length=255), nullable=False),
+    sa.Column('name', sa.String(length=50), nullable=True),
+    sa.Column('surname', sa.String(length=50), nullable=True),
+    sa.Column('code', sa.String(length=25), nullable=True),
+    sa.Column('password_hash', sa.String(length=255), nullable=True),
+    sa.Column('telegram_id', sa.BigInteger(), nullable=True),
+    sa.Column('telegram_username', sa.String(length=255), nullable=True),
+    sa.Column('google_id', sa.String(length=255), nullable=True),
+    sa.Column('email', sa.String(length=255), nullable=True),
     sa.Column('scores', sa.Integer(), nullable=False),
     sa.Column('confirmed', sa.Boolean(), nullable=False),
     sa.Column('created_at', sa.DateTime(), server_default=sa.text('now()'), nullable=False),
-    sa.Column('password_hash', sa.String(length=255), nullable=False),
-    sa.Column('group_id', sa.Integer(), nullable=False),
-    sa.Column('year_id', sa.Integer(), nullable=False),
+    sa.Column('group_id', sa.Integer(), nullable=True),
+    sa.Column('year', sa.Enum('FIRST', 'SECOND', 'THIRD', 'FOURTH', 'FIFTH', 'SIXTH', name='year'), nullable=True),
+    sa.CheckConstraint('telegram_id IS NOT NULL OR google_id IS NOT NULL OR code IS NOT NULL', name='check_at_least_one_auth_method'),
     sa.ForeignKeyConstraint(['group_id'], ['groups.id'], ),
-    sa.ForeignKeyConstraint(['year_id'], ['years.id'], ),
-    sa.PrimaryKeyConstraint('id')
+    sa.PrimaryKeyConstraint('id'),
+    sa.UniqueConstraint('code'),
+    sa.UniqueConstraint('email'),
+    sa.UniqueConstraint('google_id'),
+    sa.UniqueConstraint('telegram_id')
     )
-    op.create_index(op.f('ix_users_email'), 'users', ['email'], unique=True)
     op.create_index(op.f('ix_users_name'), 'users', ['name'], unique=False)
+    op.create_index(op.f('ix_users_role'), 'users', ['role'], unique=False)
     op.create_table('choices',
     sa.Column('id', sa.Integer(), nullable=False),
     sa.Column('question_id', sa.Integer(), nullable=False),
@@ -141,14 +144,14 @@ def downgrade() -> None:
     op.drop_table('exam_sessions')
     op.drop_index('uq_choice_is_correct', table_name='choices', postgresql_where=sa.text('is_correct = true'))
     op.drop_table('choices')
+    op.drop_index(op.f('ix_users_role'), table_name='users')
     op.drop_index(op.f('ix_users_name'), table_name='users')
-    op.drop_index(op.f('ix_users_email'), table_name='users')
     op.drop_table('users')
     op.drop_table('task_targets')
     op.drop_table('questions')
     op.drop_table('exam_targets')
-    op.drop_table('years')
     op.drop_table('situations_task')
+    op.drop_index(op.f('ix_groups_is_active'), table_name='groups')
     op.drop_table('groups')
     op.drop_table('exams')
     # ### end Alembic commands ###
