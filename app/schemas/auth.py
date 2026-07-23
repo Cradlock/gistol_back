@@ -16,11 +16,12 @@ class UserCreate(BaseModel):
 
 class UserResponse(BaseModel):
     id: int
-    name: str
-    surname: str
-    scores: int
-    year: int 
-    group: GroupResponse
+    name: str | None 
+    surname: str | None 
+    scores: int | None 
+    year: int | None 
+    group: GroupResponse | None
+    code: str | None
 
     class Config:
         from_attributes = True
@@ -31,8 +32,8 @@ class TelegramAuthRequest(BaseModel):
     id_token: str
 
 class TelegramAuthResponse(BaseModel):
-    access: str 
-    refresh: str
+    access_token: str 
+    refresh_token: str
     isNew: bool
     telegramId: str
     user: UserResponse | None
@@ -41,10 +42,10 @@ class TelegramAuthResponse(BaseModel):
 
 # Refres logic 
 class RefreshTokenResponse(BaseModel):
-    access: str 
+    access_token: str 
 
 class RefreshTokenRequest(BaseModel):
-    refresh: str 
+    refresh_token: str 
 
 
 
@@ -55,8 +56,8 @@ class AdminLoginRequest(BaseModel):
     password:str
 
 class AdminLoginResponse(BaseModel):
-    access: str 
-    refresh: str 
+    access_token: str 
+    refresh_token: str 
     user: UserResponse
 
 # Complete user logic 

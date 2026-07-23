@@ -30,7 +30,12 @@ class AuthDataAbstract(ABC):
     async def get_by_id(self, user_id: int) -> User | None:
         """Получить пользователя по первичному ключу (ID)"""
         pass
-
+    
+    @abstractmethod
+    async def get_all_by_field(self, field: str, value: Any) -> list[User]:
+        """Универсальный метод получения СПИСКА пользователей по полю (например, group_id)"""
+        pass
+    
     @abstractmethod
     async def get_by_field(self, field: str, value: Any) -> User | None:
         """
@@ -132,10 +137,10 @@ class AuthService:
         return {
             "user": user,
             "isNew": is_new,
-            "access": create_access_token(token_payload),
-            "refresh": create_refresh_token(token_payload)
+            "access_token": create_access_token(token_payload),
+            "refresh_token": create_refresh_token(token_payload)
         }
-    async def login_by_code(self, code: str, password: str):
+    async def login_by_code(self, code: str, password: str) -> dict:
         user = await self.repository.get_by_field("code", code)
         
         if not user or user.role < UserRoleEnum.TEACHER:
@@ -144,8 +149,17 @@ class AuthService:
         # Здесь будет твоя функция проверки хэша пароля (например, verify_password)
         if not verify_password(password, user.password_hash):
             raise unauthorized_exception("Incorrect password or code ")
-            
-        return user
+        
+        payload = {
+            "sub": str(user.id)
+        }
+
+        return {
+            "access_token": create_access_token(payload),
+            "refresh_token": create_refresh_token(payload),
+            "user": user,
+
+        }
     
     async def refresh_token(self,payload: dict) -> dict:
         token_payload = {
@@ -153,8 +167,8 @@ class AuthService:
         }
         
         return {
-            "access": create_access_token(token_payload),
-            "refresh": create_refresh_token(token_payload)
+            "access_token": create_access_token(token_payload),
+            "refresh_token": create_refresh_token(token_payload)
         }
 
 
@@ -174,7 +188,11 @@ class AuthService:
 
 
     # На будущее 
-    async def create_teacher(self, code,password ):
-        pass 
-
+    # async def create_teacher(self, code,password ):
+    #    pass 
+    
+    async def get_students_by_group(self,group_id:int) -> list[User]:
+        users = await self.repository.get_all_by_field("group_id",group_id)
+        
+        return users
 

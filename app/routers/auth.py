@@ -42,11 +42,6 @@ async def refresh_token(
     return await service.refresh_token(data.model_dump()) 
 
 
-# выход из аккаунта
-# @router.get("/logout")
-
-
-
 
 # Проверка пользователя
 @router.get("/me",response_model=UserResponse)
@@ -56,18 +51,13 @@ async def me_api(current_user : User = Depends(get_current_user)):
 
 
 
-
 # Логин админа 
-@router.post("/admin/login",response_model=AdminLoginResponse)
+@router.post("/login",response_model=AdminLoginResponse)
 async def admin_login(
     data: AdminLoginRequest,
     service: AuthService = Depends(get_auth_service) 
 ):
     return await service.login_by_code(data.code,data.password)
-
-
-# На будущее
-# @router.post("/admin/add_teacher",response_model=TokenResponse):
 
 
 

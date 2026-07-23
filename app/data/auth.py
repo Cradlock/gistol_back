@@ -52,6 +52,24 @@ class AuthDataSQLAlchemy(AuthDataAbstract):
 
         result = await self.db.execute(query)
         return result.scalar_one_or_none()
+    
+    @override
+    async def get_all_by_field(self, field: str, value: Any) -> list[User]:
+        """Универсальный метод получения СПИСКА пользователей по полю (например, group_id)"""
+        column = getattr(User, field, None)
+        if column is None:
+            raise ValueError(f"Модель User не имеет поля '{field}'")
+             
+        query = (
+            select(User)
+            .where(column == value)
+            .options(
+                selectinload(User.group)
+            )
+        )
+
+        result = await self.db.execute(query)
+        return list(result.scalars().all()) 
 
     @override
     async def create_user(self, user_data: dict[str, Any]) -> User:

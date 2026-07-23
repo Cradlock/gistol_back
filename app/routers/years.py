@@ -6,8 +6,6 @@ from fastapi import APIRouter, Depends, status
 from sqlalchemy.sql.visitors import prefix_anon_map
 
 from app.models.years import Year
-from app.schemas.years import YearCreate, YearResponse
-from app.services.years import YearService
 
 
 router = APIRouter(
