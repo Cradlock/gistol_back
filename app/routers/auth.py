@@ -43,16 +43,8 @@ async def refresh_token(
 
 
 
-# Проверка пользователя
-@router.get("/me",response_model=UserResponse)
-async def me_api(current_user : User = Depends(get_current_user)):
-    return current_user
-
-
-
-
 # Логин админа 
-@router.post("/login",response_model=AdminLoginResponse)
+@router.post("/admin",response_model=AdminLoginResponse)
 async def admin_login(
     data: AdminLoginRequest,
     service: AuthService = Depends(get_auth_service) 
