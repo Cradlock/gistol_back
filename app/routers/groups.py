@@ -32,7 +32,9 @@ router = APIRouter(
 @router.get("/",response_model=list[GroupResponse])
 async def get_by_year(
     year: Year = Query(... , description="Номер курса от 1 до 6"),
+    admin: User = Depends(get_current_teacher),
     service: GroupService = Depends(get_group_service)
+
 ):
     return await service.get_by_year(year)
 

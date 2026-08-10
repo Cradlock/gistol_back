@@ -23,6 +23,8 @@ async def create_admin(service: AuthService):
         return 
 
     admin_data = {
+        "name":"Admin",
+        "surname":"Adminovich",
         "code":code,
         "password_hash": hash_password(raw_password),
         "name":"Root admin",

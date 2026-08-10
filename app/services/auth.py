@@ -162,6 +162,9 @@ class AuthService:
         }
     
     async def refresh_token(self,payload: dict) -> dict:
+        # Проверьте, что payload вообще содержит 'sub' перед тем как к нему обращаться
+        if "sub" not in payload:
+            raise unauthorized_exception("Invalid refresh token") 
         token_payload = {
             "sub": str(payload["sub"])
         }
@@ -195,4 +198,10 @@ class AuthService:
         users = await self.repository.get_all_by_field("group_id",group_id)
         
         return users
+    
+    
+    
+
+
+
 
