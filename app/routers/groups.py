@@ -6,7 +6,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.data.groups import GroupDataSQLAlchemy
 from app.models.user import User
 from app.models.years import Year
-from app.schemas.group import GroupCreate, GroupResponse, GroupUpdate
+from app.schemas.group import GroupCreate, GroupListResponse, GroupResponse, GroupSearchParams, GroupUpdate
 from app.services.groups import GroupService
 
 
@@ -28,6 +28,10 @@ router = APIRouter(
 # patch [id] - update data
 
 
+
+@router.get("/search",response_model=GroupListResponse)
+async def search(admin: User = Depends(get_current_teacher),params: GroupSearchParams = Depends()):
+    pass 
 
 @router.get("/",response_model=list[GroupResponse])
 async def get_by_year(

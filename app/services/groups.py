@@ -64,4 +64,8 @@ class GroupService:
             raise not_found_exception("Group not found")
         
         return await self.repo.partial_update(id,updated_data) 
+        
+
+    async def search(self, params: dict) -> list[Group]:
+        pass 
 
