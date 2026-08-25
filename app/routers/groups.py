@@ -30,17 +30,13 @@ router = APIRouter(
 
 
 @router.get("/search",response_model=GroupListResponse)
-async def search(admin: User = Depends(get_current_teacher),params: GroupSearchParams = Depends()):
-    pass 
-
-@router.get("/",response_model=list[GroupResponse])
-async def get_by_year(
-    year: Year = Query(... , description="Номер курса от 1 до 6"),
+async def search(
     admin: User = Depends(get_current_teacher),
+    params: GroupSearchParams = Depends(),
     service: GroupService = Depends(get_group_service)
-
 ):
-    return await service.get_by_year(year)
+    return await service.search(params.model_dump()) 
+
 
 
 @router.post("/",response_model=GroupResponse)

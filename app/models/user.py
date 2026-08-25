@@ -45,7 +45,8 @@ class User(Base):
 
     confirmed: Mapped[bool] = mapped_column(default=False,index=True)
     created_at: Mapped[datetime] = mapped_column(server_default=func.now()) 
-      
+    
+    
     # Завершенность записи
     confirmed: Mapped[bool] = mapped_column(default=False)
     

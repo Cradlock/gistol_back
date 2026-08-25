@@ -21,6 +21,9 @@ class GroupDataAsbtract(ABC):
     async def get_active_by_year(self, year:Year) -> Sequence[Group]:
         pass
 
+    @abstractmethod
+    async def search(self,params: group.GroupSearchParams) -> tuple[list[Group],int]:
+        pass
     #=== Update
     @abstractmethod
     async def partial_update(self, id:int,update_data:dict) -> Optional[Group]:
@@ -41,14 +44,6 @@ class GroupService:
        
     async def create_group(self, data: dict) -> Group:
         return await self.repo.create(data)
-
-    async def get_by_year(self, year_value: int) -> Sequence[Group]:
-        try:
-            year_enum = Year(year_value)
-        except ValueError:
-            raise bad_request_exception("Invalid Group")
-        return await self.repo.get_active_by_year(year_enum)
-
 
     async def soft_delete_group(self, group_id: int) -> None:
         group = await self.repo.get_by_id(group_id)
