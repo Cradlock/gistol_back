@@ -1,7 +1,8 @@
 
 
 
-from app.core.exceptions import bad_request_exception, not_found_exception
+from app.core.errors import DuplicateError
+from app.core.exceptions import bad_request_exception, conflict_exception, not_found_exception
 from abc import ABC, abstractmethod
 from typing import Any, Optional, Sequence
 
@@ -18,7 +19,7 @@ class GroupDataAsbtract(ABC):
         pass 
     
     @abstractmethod
-    async def get_active_by_year(self, year:Year) -> Sequence[Group]:
+    async def get_active_by_year(self, year:Year) -> tuple[list[Group],int]:
         pass
 
     @abstractmethod
@@ -43,8 +44,25 @@ class GroupService:
         self.repo = repository
        
     async def create_group(self, data: dict) -> Group:
-        return await self.repo.create(data)
+        
+        try:
+            result = await self.repo.create(data)
+            
+            return result;
+        except DuplicateError:
+            raise conflict_exception("That group alrady exists")
 
+    
+    async def get_by_year(self,year: Year) -> group.GroupListResponse:
+        groups,total = await self.repo.get_active_by_year(year)
+            
+        groups_res = [group.GroupResponse.model_validate(g) for g in groups]
+        
+        return group.GroupListResponse(
+            total=total,
+            groups=groups_res
+        )
+        
     async def soft_delete_group(self, group_id: int) -> None:
         group = await self.repo.get_by_id(group_id)
         if not group:
@@ -61,6 +79,13 @@ class GroupService:
         return await self.repo.partial_update(id,updated_data) 
         
 
-    async def search(self, params: dict) -> list[Group]:
-        pass 
+    async def search(self, params: group.GroupSearchParams) -> group.GroupListResponse:
+        groups,total = await self.repo.search(params)
+            
+        groups_res = [group.GroupResponse.model_validate(g) for g in groups]
+        
+        return group.GroupListResponse(
+            total=total,
+            groups=groups_res
+        ) 
 

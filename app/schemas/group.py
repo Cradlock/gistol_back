@@ -80,6 +80,5 @@ class GroupResponse(BaseModel):
 
 class GroupListResponse(BaseModel):
     total: int
-    hasNext: bool
     groups: list[GroupResponse]
 

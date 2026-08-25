@@ -2,12 +2,15 @@
 
 
 
+from functools import wraps
 from operator import and_
 from typing import Optional, Sequence, override
 
 from sqlalchemy import func, select, update
+from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.core.exceptions import conflict_exception
 from app.models.groups import Group
 from app.models.years import Year
 from app.schemas.group import GroupSearchParams, SortTypeEnum
@@ -19,17 +22,33 @@ class GroupDataSQLAlchemy(GroupDataAsbtract):
     def __init__(self, db: AsyncSession):
         self.db = db
     
-   
+
+    @staticmethod
+    def handle_integrity_error(func):
+        @wraps(func)
+        async def wrapper(self, *args, **kwargs):
+            try:
+                return await func(self, *args, **kwargs)
+            except IntegrityError:
+                # Делаем rollback сессии прямо в репозитории
+                await self.db.rollback()
+                # Возвращаем готовое исключение с 409 статусом (или можно бросать кастомное)
+                raise conflict_exception("Запись с такими данными уже существует")
+    
+        return wrapper
+    
     @override
-    async def get_active_by_year(self, year: Year) -> Sequence[Group]:
+    async def get_active_by_year(self, year: Year) -> tuple[list[Group],int]:
         """Фильтрация живых групп по конкретному курсу (для фронтенда регистраций)"""
         query = select(Group).where(Group.year == year, Group.is_active == True).order_by(Group.title)
         result = await self.db.execute(query)
         return result.scalars().all()
-    
+     
+    @handle_integrity_error
     @override
     async def create(self, data: dict) -> Group:
         new_group = Group(**data)
+
         self.db.add(new_group)
         await self.db.commit()
         await self.db.refresh(new_group)

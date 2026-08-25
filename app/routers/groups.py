@@ -35,9 +35,15 @@ async def search(
     params: GroupSearchParams = Depends(),
     service: GroupService = Depends(get_group_service)
 ):
-    return await service.search(params.model_dump()) 
+    return await service.search(params) 
 
 
+@router.get("/{year}",response_model=GroupListResponse)
+async def get_by_year(
+    year: Year = Query(),
+    service: GroupService = Depends(get_group_service)
+):
+    return await service.get_by_year(year) 
 
 @router.post("/",response_model=GroupResponse)
 async def create(

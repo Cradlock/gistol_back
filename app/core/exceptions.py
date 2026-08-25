@@ -59,3 +59,5 @@ def internal_server_exception(detail: str = "Internal server error") -> HTTPExce
         status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
         detail=detail
     )
+
+
