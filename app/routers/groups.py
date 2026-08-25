@@ -38,7 +38,7 @@ async def search(
     return await service.search(params) 
 
 
-@router.get("/{year}",response_model=GroupListResponse)
+@router.get("/",response_model=GroupListResponse)
 async def get_by_year(
     year: Year = Query(),
     service: GroupService = Depends(get_group_service)
