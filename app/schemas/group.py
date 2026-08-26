@@ -25,7 +25,7 @@ class SortFieldEnum(StrEnum):
 class GroupSearchParams(BaseModel): 
     sort_type: Optional[SortTypeEnum] = Field( description="Тип сортировки (от большего к меньшему (max_to_min) и наоборт (min_to_max) ) ")
     sort_field: Optional[SortFieldEnum] = Field( description="Поле по которому будет идти сортировка ") 
-    title: Optional[str] = Field(description="Название группы")
+    title: Optional[str] = Field(default=None,description="Название группы")
 
     min_students_count: Optional[int] = Field(default=None, description="Минимальное число студентов")
     max_students_count: Optional[int] = Field(default=None, description="Максимальное число студентов")
