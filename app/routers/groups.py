@@ -6,7 +6,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.data.groups import GroupDataSQLAlchemy
 from app.models.user import User
 from app.models.years import Year
-from app.schemas.group import GroupCreate, GroupListResponse, GroupResponse, GroupSearchParams, GroupUpdate
+from app.schemas.group import GroupBulkDeleteRequest, GroupCreate, GroupListResponse, GroupResponse, GroupSearchParams, GroupUpdate
 from app.services.groups import GroupService
 
 
@@ -24,7 +24,7 @@ router = APIRouter(
 ## '/'
 # post - create
 # get - get by id | get by year
-# delete [id] - soft delete 
+# delete [id] - deletes 
 # patch [id] - update data
 
 
@@ -63,5 +63,16 @@ async def partial_update(
     service: GroupService = Depends(get_group_service)
 ):
     return await service.partial_update_group(id,data.model_dump())
+
+
+
+
+@router.delete("/")
+async def bulk_delete(
+    group_ids: GroupBulkDeleteRequest,
+    admin: User = Depends(get_current_teacher),
+    service: GroupService = Depends(get_group_service)
+): 
+    return await service.bulk_soft_delete_group(group_ids) 
 
 

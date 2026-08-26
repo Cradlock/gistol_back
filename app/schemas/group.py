@@ -53,12 +53,7 @@ class GroupCreate(BaseModel):
         ..., 
         description="Курс, к которому относится группа (число от 1 до 6)"
     )
-    is_active:bool = Field(
-        default=True,
-        description="Активность группы"
-    )
-
-
+    
 class GroupUpdate(BaseModel):
     title: Optional[str] = Field(
         None, 
@@ -82,4 +77,10 @@ class GroupResponse(BaseModel):
 class GroupListResponse(BaseModel):
     total: int
     groups: list[GroupResponse]
+
+
+class GroupBulkDeleteRequest(BaseModel):
+    ids: list[int] = Field(...,description="cписок ID групп для удаления")
+
+
 

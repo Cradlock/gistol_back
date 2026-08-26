@@ -6,7 +6,7 @@ from functools import wraps
 from operator import and_
 from typing import Optional, Sequence, override
 
-from sqlalchemy import func, select, update
+from sqlalchemy import CursorResult, func, select, update
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -42,8 +42,27 @@ class GroupDataSQLAlchemy(GroupDataAsbtract):
         """Фильтрация живых групп по конкретному курсу (для фронтенда регистраций)"""
         query = select(Group).where(Group.year == year, Group.is_active == True).order_by(Group.title)
         result = await self.db.execute(query)
-        return result.scalars().all()
-     
+        
+        count_query = select(func.count()).select_from(query.subquery())
+        total_result = await self.db.execute(count_query)
+        total = total_result.scalar_one()
+        
+        return list(result.scalars().all()),total
+
+    
+    @override
+    async def bulk_soft_delete(self, group_ids: list[int]) -> int:
+        query = (
+            update(Group)
+            .where(Group.id.in_(group_ids))
+            .values(is_active=False)
+            .returning(Group.id)
+        )
+        
+        result = await self.db.execute(query)
+        await self.db.commit()
+        return len(result.scalars().all())
+
     @handle_integrity_error
     @override
     async def create(self, data: dict) -> Group:
@@ -66,8 +85,7 @@ class GroupDataSQLAlchemy(GroupDataAsbtract):
             # Поиск по подстроке (ILIKE для регистронезависимости в Postgres)
             filters.append(Group.title.ilike(f"%{params.title}%"))
             
-        if params.active is not None:
-            filters.append(Group.is_active == params.active)
+        filters.append(Group.is_active == True)
             
         if params.min_year:
             filters.append(Group.year >= params.min_year)
