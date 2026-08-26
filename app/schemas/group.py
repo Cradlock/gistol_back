@@ -73,6 +73,7 @@ class GroupResponse(BaseModel):
     title: str
     year: Year
     is_active: bool
+    created_date: datetime 
 
     class Config:
         # Включаем ORM-режим, чтобы Pydantic умел читать данные прямо из моделей SQLAlchemy
