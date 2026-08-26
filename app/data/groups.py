@@ -101,7 +101,7 @@ class GroupDataSQLAlchemy(GroupDataAsbtract):
             filters.append(Group.created_date <= params.max_date)
             
         if filters:
-            query = query.where(and_(*filters))
+            query = query.where(*filters)
 
         # 2. Считаем общее количество записей (для пагинации и hasNext)
         count_query = select(func.count()).select_from(query.subquery())
