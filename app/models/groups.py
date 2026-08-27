@@ -2,7 +2,7 @@
 from datetime import datetime
 from operator import index
 from typing import final
-from sqlalchemy import DateTime, ForeignKey,Enum, String, func
+from sqlalchemy import DateTime, ForeignKey,Enum, Index, String, func
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.models.base import Base
@@ -16,7 +16,7 @@ class Group(Base):
     """
     id: Mapped[int] = mapped_column(primary_key=True)
     
-    title: Mapped[str] = mapped_column(String(100),unique=True) 
+    title: Mapped[str] = mapped_column(String(100),index=True) 
     
     created_date: Mapped[datetime] = mapped_column(
         DateTime, 
@@ -29,4 +29,16 @@ class Group(Base):
     is_active: Mapped[bool] = mapped_column(default=True, index=True)
 
     users: Mapped["User"] = relationship(back_populates="group")
+        
+
+    __table_args__ = (
+        Index(
+            "uq_active_group_title",
+            "title",
+            "year",
+            unique=True,
+            postgresql_where=(is_active == True)
+        ),
+        )
+
 
