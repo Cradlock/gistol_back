@@ -90,4 +90,22 @@ async def get_current_teacher(
     return current_user
 
 
+async def get_current_refresh_user(
+    token: str = Depends(get_refresh_token),
+    service: AuthService = Depends(get_auth_service)
+) -> User:
+    try:
+        payload = jwt.decode(token, settings.secret_key, algorithms=[settings.algorithm])
+        user_id: int | None = payload.get("sub")
+        
+        # Проверяем, что это именно рефреш-токен, а не access
+        if user_id is None or payload.get("type") != "refresh":
+            raise unauthorized_exception("Invalid refresh token type")
+            
+    except JWTError:
+        raise unauthorized_exception("Invalid refresh token signature or expired")
 
+    user = await service.get_user_by_id(int(user_id))
+    if not user:
+        raise unauthorized_exception("User not found")
+    return user

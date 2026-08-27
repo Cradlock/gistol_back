@@ -1,6 +1,6 @@
 from fastapi import APIRouter, Depends
 
-from app.dependencies import get_auth_service, get_current_user
+from app.dependencies import get_auth_service, get_current_refresh_user, get_current_user
 from app.models.user import User
 from app.schemas.auth import AdminLoginRequest, AdminLoginResponse, CompleteUserRequest, RefreshTokenRequest, RefreshTokenResponse,TelegramAuthRequest, TelegramAuthResponse,UserResponse
 from app.services.auth import AuthService
@@ -36,10 +36,10 @@ async def complete_auth(
 # обновление токена 
 @router.post("/refresh",response_model=RefreshTokenResponse)
 async def refresh_token(
-    data: RefreshTokenRequest,
+    user: User = Depends(get_current_refresh_user),
     service: AuthService = Depends(get_auth_service)
 ):
-    return await service.refresh_token(data.model_dump()) 
+    return await service.refresh_token({"sub":user.id}) 
 
 
 
