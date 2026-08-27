@@ -40,6 +40,11 @@ class GroupDataAsbtract(ABC):
     @abstractmethod
     async def bulk_soft_delete(self,group_ids: list[int]) -> int:
         pass
+    
+    
+    @abstractmethod
+    async def bulk_return(self,group_ids: list[int]) -> int;
+        pass
 
 class GroupService:
     def __init__(self, repository: GroupDataAsbtract):
@@ -73,6 +78,14 @@ class GroupService:
             bad_request_exception("ID list not can be a None")
 
         return await self.repo.bulk_soft_delete(group_ids.ids);             
+   
+
+    async def bulk_return_group(self, group_ids: group.GroupBulkDeleteRequest) -> int:
+        if not group_ids or group_ids.ids.count == 0:
+            bad_request_exception("ID list not can be a None")
+
+        return await self.repo.bulk_return(group_ids.ids);             
+   
 
     async def partial_update_group(self,id:int, updated_data:dict) -> Group | None:
         group = await self.repo.get_by_id(id)

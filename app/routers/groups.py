@@ -76,3 +76,12 @@ async def bulk_delete(
     return await service.bulk_soft_delete_group(group_ids) 
 
 
+@router.patch("/return")
+async def bulk_rec(
+    group_ids: GroupBulkDeleteRequest,
+    admin: User = Depends(get_current_teacher),
+    service: GroupService = Depends(get_group_service)
+): 
+    return await service.bulk_return_group(group_ids) 
+
+

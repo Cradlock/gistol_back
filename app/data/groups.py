@@ -49,7 +49,21 @@ class GroupDataSQLAlchemy(GroupDataAsbtract):
         
         return list(result.scalars().all()),total
 
-    
+     
+    @override
+    async def bulk_return(self, group_ids: list[int]) -> int:
+        query = (
+            update(Group)
+            .where(Group.id.in_(group_ids))
+            .values(is_active=True)
+            .returning(Group.id)
+        )
+        
+        result = await self.db.execute(query)
+        await self.db.commit()
+        return len(result.scalars().all())
+
+
     @override
     async def bulk_soft_delete(self, group_ids: list[int]) -> int:
         query = (
