@@ -43,7 +43,7 @@ class GroupDataAsbtract(ABC):
     
     
     @abstractmethod
-    async def bulk_return(self,group_ids: list[int]) -> int;
+    async def bulk_return(self,group_ids: list[int]) -> int:
         pass
 
 class GroupService:
