@@ -96,10 +96,9 @@ class GroupDataSQLAlchemy(GroupDataAsbtract):
         filters = []
         
         if params.title:
-            # Поиск по подстроке (ILIKE для регистронезависимости в Postgres)
             filters.append(Group.title.ilike(f"%{params.title}%"))
             
-        if params.active:    
+        if params.active is not None:    
             filters.append(Group.is_active == params.active)
             
         if params.min_year:
