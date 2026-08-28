@@ -98,8 +98,8 @@ class GroupDataSQLAlchemy(GroupDataAsbtract):
         if params.title:
             filters.append(Group.title.ilike(f"%{params.title}%"))
             
-        if params.active is not None:    
-            filters.append(Group.is_active == params.active)
+        filters.append(Group.is_active == params.active)
+
             
         if params.min_year:
             filters.append(Group.year >= params.min_year)

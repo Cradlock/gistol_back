@@ -36,7 +36,7 @@ class GroupSearchParams(BaseModel):
     min_year: Optional[Year] = Field(default=None, description="Год от")
     max_year: Optional[Year] = Field(default=None, description="Год до")
 
-    active: Optional[bool] = Field(default=None, description="Активна ли группа")
+    active: bool = Field( description="Активна ли группа")
     
     page:int = Field(...,description="Номер порции данных")
     page_size:int = Field(...,description="Количество данных в одной порции")
