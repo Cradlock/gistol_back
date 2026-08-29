@@ -2,6 +2,7 @@ from abc import ABC, abstractmethod
 from jwt import (
     PyJWKSet, PyJWTError, get_unverified_header
 )
+import jwt
 from sqlalchemy import except_
 from app.core import settings,verify_password
 from fastapi import Request
@@ -136,10 +137,11 @@ class AuthService:
         
         return {
             "user": user,
-            "isNew": is_new,
+            "is_new": is_new,
             "access_token": create_access_token(token_payload),
             "refresh_token": create_refresh_token(token_payload)
         }
+
     async def login_by_code(self, code: str, password: str) -> dict:
         user = await self.repository.get_by_field("code", code)
         
@@ -158,7 +160,6 @@ class AuthService:
             "access_token": create_access_token(payload),
             "refresh_token": create_refresh_token(payload),
             "user": user,
-
         }
     
     async def refresh_token(self,payload: dict) -> dict:

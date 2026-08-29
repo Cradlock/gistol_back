@@ -71,8 +71,6 @@ class GroupService:
             total=total,
             groups=groups_res
         )
-       
-
     async def bulk_soft_delete_group(self, group_ids: group.GroupBulkDeleteRequest) -> int:
         if not group_ids or group_ids.ids.count == 0:
             bad_request_exception("ID list not can be a None")

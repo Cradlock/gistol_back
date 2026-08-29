@@ -34,10 +34,8 @@ class TelegramAuthRequest(BaseModel):
 class TelegramAuthResponse(BaseModel):
     access_token: str 
     refresh_token: str
-    isNew: bool
-    telegramId: str
+    is_new: bool
     user: UserResponse | None
-
 
 
 # Refres logic 

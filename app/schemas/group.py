@@ -63,6 +63,7 @@ class GroupUpdate(BaseModel):
     )
     year: Optional[Year] = None
 
+
 class GroupResponse(BaseModel):
     id: int
     title: str
