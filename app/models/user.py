@@ -43,13 +43,13 @@ class User(Base):
 
     scores: Mapped[int] = mapped_column(default=0)
 
-    confirmed: Mapped[bool] = mapped_column(default=False,index=True)
     created_at: Mapped[datetime] = mapped_column(server_default=func.now()) 
     
     
     # Завершенность записи
-    confirmed: Mapped[bool] = mapped_column(default=False)
+    confirmed: Mapped[bool] = mapped_column(default=False,index=True)
     
+
     # Это связь FroegnKey 
     group_id: Mapped[Optional[int]] = mapped_column(ForeignKey("groups.id"))  
     year: Mapped[Optional[Year]] = mapped_column(Enum(Year),default=Year.FIRST)

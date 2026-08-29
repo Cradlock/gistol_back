@@ -128,16 +128,13 @@ class AuthService:
         
         user = await self.repository.get_by_field("telegram_id", telegram_id) 
  
-        is_new = False
         if user is None:
             user = await self.repository.create_user({"telegram_id": telegram_id})
-            is_new = True
 
         token_payload = {"sub": str(user.id)}
         
         return {
             "user": user,
-            "is_new": is_new,
             "access_token": create_access_token(token_payload),
             "refresh_token": create_refresh_token(token_payload)
         }
