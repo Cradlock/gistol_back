@@ -34,7 +34,7 @@ class User(Base):
     password_hash: Mapped[Optional[str]] = mapped_column(String(255),nullable=True)
 
     # Вход через телеграм
-    telegram_id: Mapped[Optional[int]] = mapped_column(BigInteger,unique=True)
+    telegram_id: Mapped[Optional[str]] = mapped_column(String(255),unique=True)
     telegram_username: Mapped[Optional[str]] = mapped_column(String(255))
 
     # Вход через Google 
