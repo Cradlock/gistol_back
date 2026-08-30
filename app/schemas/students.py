@@ -16,4 +16,9 @@ class StudentUpdate(BaseModel):
     scores: int 
      
 
+class StudentComplete(BaseModel):
+    surname: str 
+    name:str
+    group_id:int 
+    year:Year
 

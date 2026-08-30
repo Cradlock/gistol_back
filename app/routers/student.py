@@ -1,9 +1,12 @@
 
 from fastapi import APIRouter, Depends
 
-from app.dependencies import get_current_user
+from app.dependencies import get_auth_service, get_current_user, get_student_repo, get_student_service
 from app.models.user import User
 from app.schemas.auth import UserResponse
+from app.schemas.students import StudentComplete
+from app.services.auth import AuthService
+from app.services.student import StudentService
 
 
 router = APIRouter(
@@ -22,7 +25,14 @@ async def me_api(current_user : User = Depends(get_current_user)):
     return current_user
 
 
-
+# Полнове оформление аккаунта
+@router.post("/complete", response_model=UserResponse)
+async def complete_student(
+    data: StudentComplete, 
+    current_user: User = Depends(get_current_user),
+    service: StudentService = Depends(get_student_service)
+):
+    return await service.complete_student(current_user,data)
 
 
 #
