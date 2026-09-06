@@ -22,6 +22,7 @@ class UserResponse(BaseModel):
     year: int | None 
     group: GroupResponse | None
     code: str | None
+    confirmed: bool
 
     class Config:
         from_attributes = True
