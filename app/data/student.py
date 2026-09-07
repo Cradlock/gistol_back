@@ -28,8 +28,7 @@ class StudentDataSQLAlchemy(StudentDataAbstract):
             .values(
                 name=data.name,
                 surname=data.surname,
-                group_id=data.group_id,
-                is_profile_completed=True
+                group_id=data.group_id
             )
             .returning(User) # Возвращаем обновленный объект модели
         )
