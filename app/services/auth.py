@@ -123,7 +123,9 @@ class AuthService:
             "user": user,
             "access_token": create_access_token(token_payload),
             "refresh_token": create_refresh_token(token_payload),
-        }    async def login_by_code(self, code: str, password: str) -> dict:
+        }    
+
+    async def login_by_code(self, code: str, password: str) -> dict:
         user = await self.repository.get_by_field("code", code)
         
         if not user or user.role < UserRoleEnum.TEACHER:
