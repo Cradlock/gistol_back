@@ -1,6 +1,6 @@
 from abc import ABC, abstractmethod
 from jwt import (
-    PyJWKSet, PyJWTError, get_unverified_header
+    PyJWKClient, PyJWKSet, PyJWTError, get_unverified_header
 )
 import jwt
 from sqlalchemy import except_
@@ -65,81 +65,65 @@ class AuthDataAbstract(ABC):
 
 
 class AuthService:
-    TELEGRAM_JWKS_URL = "https://oauth.telegram.org/.well-known/jwks.json"
-    TELEGRAM_ISSUER = "https://oauth.telegram.org"
     
     def __init__(self, auth_repository: AuthDataAbstract):
         if auth_repository is None:
             raise ValueError("AuthService требует валидный auth_repository")
         self.repository = auth_repository
         self.bot_client_id = settings.telegram_bot_client_id
-    
-    async def _get_telegram_public_key(self, token: str):
-        try:
-            unverified_header = get_unverified_header(token)
-            kid = unverified_header.get("kid")
-        except PyJWTError:
-            raise unauthorized_exception("Invalid token structure")
+        self.TELEGRAM_ISSUER = "https://oauth.telegram.org"
+        self.TELEGRAM_JWKS_URL = (
+            "https://oauth.telegram.org/.well-known/jwks.json"
+        )
 
-        if not kid:
-            raise unauthorized_exception("Invalid tg token header (missing kid)")
-
-        try:
-            # Используем кэшированный запрос или обычный httpx
-            async with httpx.AsyncClient() as client:
-                response = await client.get(self.TELEGRAM_JWKS_URL)
-                response.raise_for_status()
-                jwks = response.json()
-
-            # Поиск ключа через PyJWKSet
-            jwk_set = PyJWKSet.from_dict(jwks)
-            for jwk in jwk_set.keys:
-                if jwk.key_id == kid:
-                    return jwk.key
-                    
-        except (httpx.HTTPError, PyJWTError) as e:
-            raise unauthorized_exception(f"Failed to fetch Telegram public keys: {str(e)}")
-
-        raise unauthorized_exception("Matching public_key not found in Telegram JWKS")
+        self._jwks_client = PyJWKClient(
+            self.TELEGRAM_JWKS_URL, cache_keys=True
+        )
 
     async def verify_telegram_token(self, id_token: str) -> dict:
-        public_key = await self._get_telegram_public_key(id_token)
         try:
+            # PyJWKClient заглядывает в кэш; если ключа нет — делает один HTTP-запрос и сохраняет его
+            signing_key = self._jwks_client.get_signing_key_from_jwt(id_token)
+
             payload = jwt.decode(
                 id_token,
-                public_key,
-                algorithms=["RS256"],          
-                audience=self.bot_client_id,    
-                issuer=self.TELEGRAM_ISSUER,    
-                options={"verify_signature": True, "verify_exp": True}
+                signing_key.key,
+                algorithms=["RS256"],
+                audience=self.bot_client_id,
+                issuer=self.TELEGRAM_ISSUER,
+                options={"verify_signature": True, "verify_exp": True},
             )
             return payload
 
         except jwt.ExpiredSignatureError:
             raise unauthorized_exception("Token has expired")
-        except jwt.PyJWTError as e:
+        except PyJWTError as e:
             raise unauthorized_exception(f"Invalid token: {str(e)}")
+        except Exception as e:
+            # Ошибки получения ключей или соединения с Telegram
+            raise internal_server_exception(
+                f"Failed to verify Telegram auth: {str(e)}"
+            )
 
     async def get_telegram_user(self, id_token: str) -> dict:
         payload = await self.verify_telegram_token(id_token)
 
-        # Telegram в sub или id передает ID пользователя
         telegram_id = str(payload.get("id") or payload.get("sub"))
-        
-        user = await self.repository.get_by_field("telegram_id", telegram_id) 
- 
+
+        user = await self.repository.get_by_field("telegram_id", telegram_id)
+
         if user is None:
-            user = await self.repository.create_user({"telegram_id": telegram_id})
+            user = await self.repository.create_user(
+                {"telegram_id": telegram_id}
+            )
 
         token_payload = {"sub": str(user.id)}
-        
+
         return {
             "user": user,
             "access_token": create_access_token(token_payload),
-            "refresh_token": create_refresh_token(token_payload)
-        }
-
-    async def login_by_code(self, code: str, password: str) -> dict:
+            "refresh_token": create_refresh_token(token_payload),
+        }    async def login_by_code(self, code: str, password: str) -> dict:
         user = await self.repository.get_by_field("code", code)
         
         if not user or user.role < UserRoleEnum.TEACHER:
