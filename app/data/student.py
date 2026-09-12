@@ -30,18 +30,16 @@ class StudentDataSQLAlchemy(StudentDataAbstract):
                 surname=data.surname,
                 group_id=data.group_id
             )
+            .returning(User)
         )
-        await self.db.execute(stmt)
+        result = await self.db.execute(stmt)
+        updated_user = result.scalars().first()
+        
         await self.db.commit()
         
-        # Запрашиваем обновлённого пользователя вместе с объектом group
-        query = (
-            select(User)
-            .where(User.id == user_id)
-            .options(joinedload(User.group))
-        )
-        result = await self.db.execute(query)
-    
-        return result.scalar()
+        # Подгружаем атрибуты/связи объекта
+        await self.db.refresh(updated_user, attribute_names=['group'])
+        if updated_user is None:
+            raise Exception()
 
-
+        return updated_user
