@@ -41,6 +41,7 @@ class StudentDataSQLAlchemy(StudentDataAbstract):
             .options(joinedload(User.group))
         )
         result = await self.db.execute(query)
-        return result.scalar().first()
+    
+        return result.scalar()
 
 
