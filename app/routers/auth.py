@@ -23,16 +23,6 @@ async def telegram_auth(
     return await service.get_telegram_user(data.id_token) 
 
 
-
-# Дополнение данных (для новых пользователей)
-@router.post("/complete",response_model=UserResponse)
-async def complete_auth(
-    data: CompleteUserRequest,
-    user: User = Depends(get_current_user),
-    service: AuthService = Depends(get_auth_service)
-):
-    return await service.complete_student_profile(user,data.model_dump(exclude_unset=True))  
-
 # обновление токена 
 @router.post("/refresh",response_model=RefreshTokenResponse)
 async def refresh_token(

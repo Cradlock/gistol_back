@@ -35,3 +35,5 @@ class StudentService:
     async def complete_student(self,user : User,data: StudentComplete)-> UserResponse:
         user =  await self.repo.complete_student(user.id, data); 
         return UserResponse.model_validate(user)
+
+

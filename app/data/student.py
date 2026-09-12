@@ -2,8 +2,9 @@
 
 from typing import override
 
-from sqlalchemy import update
+from sqlalchemy import select, update
 from sqlalchemy.ext.asyncio import AsyncSession
+from sqlalchemy.orm import joinedload
 
 from app.models.user import User
 from app.schemas.students import StudentComplete
@@ -19,9 +20,8 @@ class StudentDataSQLAlchemy(StudentDataAbstract):
     @override
     async def confirm_student(self, user_id: int):
         return await super().confirm_student(user_id)
-
     @override
-    async def complete_student(self,user_id:int, data: StudentComplete) -> User:
+    async def complete_student(self, user_id: int, data: StudentComplete) -> User:
         stmt = (
             update(User)
             .where(User.id == user_id)
@@ -30,12 +30,17 @@ class StudentDataSQLAlchemy(StudentDataAbstract):
                 surname=data.surname,
                 group_id=data.group_id
             )
-            .returning(User) # Возвращаем обновленный объект модели
         )
-        
-        result = await self.db.execute(stmt)
+        await self.db.execute(stmt)
         await self.db.commit()
         
-        updated_user = result.scalars().first()
-        
-        return updated_user
+        # Запрашиваем обновлённого пользователя вместе с объектом group
+        query = (
+            select(User)
+            .where(User.id == user_id)
+            .options(joinedload(User.group))
+        )
+        result = await self.db.execute(query)
+        return result.scalar().first()
+
+
