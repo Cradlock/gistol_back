@@ -1,6 +1,7 @@
-from pydantic import BaseModel, EmailStr, Field
+from pydantic import BaseModel, EmailStr, Field, computed_field
 
 from app.models.base import Base
+from app.models.user import UserRoleEnum
 from app.models.years import Year
 from app.schemas.group import GroupResponse
 
@@ -22,8 +23,19 @@ class UserResponse(BaseModel):
     year: int | None 
     group: GroupResponse | None
     code: str | None
-    confirmed: bool
+    role: int  
 
+    @computed_field
+    @property
+    def confirmed(self) -> bool:
+        return self.role > UserRoleEnum.NOT_CONFIRMED
+    
+    @computed_field
+    @property
+    def deleted(self) -> bool:
+        return self.role < UserRoleEnum.DELETED
+
+ 
     class Config:
         from_attributes = True
 

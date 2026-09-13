@@ -59,7 +59,16 @@ class User(Base):
     fio: Mapped[str] = mapped_column(
         String(105), 
         Computed("name || ' ' || surname", persisted=True)
-    )      
+    )
+# Чистые Python-свойства для использования в сервисах/ORМ
+    @property
+    def confirmed(self) -> bool:
+        return self.role > UserRoleEnum.NOT_CONFIRMED
+
+    @property
+    def deleted(self) -> bool:
+        return self.role == UserRoleEnum.DELETED
+    
     __table_args__ = (
         CheckConstraint(
             "telegram_id IS NOT NULL OR google_id IS NOT NULL OR code IS NOT NULL",
@@ -72,14 +81,4 @@ class User(Base):
             postgresql_using="gin",
         ),
     )  
-    
-    @computed_field
-    @property
-    def confirmed(self) -> bool:
-        # Пользователь считается подтвержденным, если его роль больше, чем NOT_CONFIRMED
-        return self.role > UserRoleEnum.NOT_CONFIRMED
-    
-    @computed_field
-    @property
-    def deleted(self) -> bool:
-        return self.role > UserRoleEnum.DELETED
+   
