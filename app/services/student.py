@@ -12,7 +12,7 @@ from abc import ABC, abstractmethod
 
 from app.models.user import User
 from app.schemas.auth import UserResponse
-from app.schemas.students import StudentComplete
+from app.schemas.students import StudentComplete, StudentFilterParams, StudentsResponseList
 
 
 class StudentDataAbstract(ABC):
@@ -26,6 +26,10 @@ class StudentDataAbstract(ABC):
     async def complete_student(self,user_id,data: StudentComplete)-> User:
         pass
 
+    @abstractmethod
+    async def search_students(self, data: StudentFilterParams) -> StudentsResponseList:
+        pass 
+
 class StudentService:
     
     def __init__(self,repo : StudentDataAbstract) -> None:
@@ -35,5 +39,8 @@ class StudentService:
     async def complete_student(self,user : User,data: StudentComplete)-> UserResponse:
         user =  await self.repo.complete_student(user.id, data); 
         return UserResponse.model_validate(user)
+
+    async def search(self, data: StudentFilterParams ) -> StudentsResponseList:
+        return await self.repo.search_students(data)
 
 

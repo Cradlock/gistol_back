@@ -1,10 +1,10 @@
 
 from fastapi import APIRouter, Depends
 
-from app.dependencies import get_auth_service, get_current_user, get_student_repo, get_student_service
+from app.dependencies import get_auth_service, get_current_teacher, get_current_user, get_student_repo, get_student_service
 from app.models.user import User
 from app.schemas.auth import UserResponse
-from app.schemas.students import StudentComplete
+from app.schemas.students import StudentComplete, StudentFilterParams, StudentsResponseList
 from app.services.auth import AuthService
 from app.services.student import StudentService
 
@@ -47,7 +47,14 @@ async def student_patch(
     pass 
 
 
-
+## Поиск студента
+@router.get("/search",response_model=StudentsResponseList)
+async def student_search(
+    admin: User = Depends(get_current_teacher),
+    service: StudentService = Depends(get_student_service),
+    data: StudentFilterParams = Depends()
+):
+    return await service.search(data) 
 
 
 
