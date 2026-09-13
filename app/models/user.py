@@ -3,7 +3,7 @@ from enum import IntEnum, unique
 from operator import index
 from typing import Optional, final
 from httpx._transports import default
-from pydantic import EmailStr
+from pydantic import EmailStr, computed_field
 from sqlalchemy import Computed, Enum,BigInteger, CheckConstraint, ForeignKey, Index, Integer, String, func
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 from app.models.base import Base
@@ -72,5 +72,14 @@ class User(Base):
             postgresql_using="gin",
         ),
     )  
- 
- 
+    
+    @computed_field
+    @property
+    def confirmed(self) -> bool:
+        # Пользователь считается подтвержденным, если его роль больше, чем NOT_CONFIRMED
+        return self.role > UserRoleEnum.NOT_CONFIRMED
+    
+    @computed_field
+    @property
+    def deleted(self) -> bool:
+        return self.role > UserRoleEnum.DELETED

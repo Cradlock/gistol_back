@@ -27,6 +27,8 @@ def forbidden_exception(detail: str = "Permission denied") -> HTTPException:
         detail=detail
     )
 
+
+
 # --- 404 Not Found (Ресурс не найден) ---
 
 def not_found_exception(detail: str = "Resource not found") -> HTTPException:

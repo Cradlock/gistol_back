@@ -116,6 +116,8 @@ class AuthService:
             user = await self.repository.create_user(
                 {"telegram_id": telegram_id}
             )
+        if user.deleted:
+            raise forbidden_exception("Account was deleted ")  
 
         token_payload = {"sub": str(user.id)}
 
