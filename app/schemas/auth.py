@@ -22,7 +22,6 @@ class UserResponse(BaseModel):
     scores: int | None 
     year: int | None 
     group: GroupResponse | None
-    code: str | None
     role: int  
 
     @computed_field
