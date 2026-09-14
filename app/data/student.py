@@ -113,27 +113,36 @@ class StudentDataSQLAlchemy(StudentDataAbstract):
     
         await self.db.commit()
         return UserResponse.model_validate(updated_user)
-
+    
     @override 
-    async def bulk_role_update(self,ids: StudentBulkRequest,role: UserRoleEnum) -> StudentBulkResponse:
-        if not ids:
-            return [], []
-
+    async def bulk_role_update(
+        self, 
+        request: StudentBulkRequest, 
+        role: UserRoleEnum
+    ) -> StudentBulkResponse:
+        # 1. Извлекаем список ID из Pydantic-модели
+        req_ids = request.ids
+    
+        if not req_ids:
+            return StudentBulkResponse(completed=[], faileds=[])
+    
+        # 2. Формируем SQL-запрос, передавая чистый список req_ids
         stmt = (
             update(User)
-            .where(User.id.in_(ids))
+            .where(User.id.in_(req_ids))
             .values(role=role)
-            .returning(User.id) # База вернет только ID тех, кто реально обновился
+            .returning(User.id) 
         )
+        
         result = await self.db.execute(stmt)
         
-        # Получаем плоский список успешно обновленных ID
+        # 3. Получаем список успешно обновленных ID
         updated_ids = list(result.scalars().all())
         
-        faileds = []
-        for i in updated_ids:
-            if i not in updated_ids:
-                faileds.append(i) 
+        # 4. Считаем провалившиеся ID через разницу множеств
+        updated_set = set(updated_ids)
+        faileds = [student_id for student_id in req_ids if student_id not in updated_set]
+    
         # 5. Фиксируем транзакцию
         await self.db.commit()
         
@@ -141,4 +150,3 @@ class StudentDataSQLAlchemy(StudentDataAbstract):
             completed=updated_ids,
             faileds=faileds
         )
-

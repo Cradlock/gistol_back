@@ -32,7 +32,7 @@ class StudentDataAbstract(ABC):
         pass
     
     @abstractmethod
-    async def bulk_role_update(self,ids: StudentBulkRequest,role: UserRoleEnum) -> StudentBulkResponse:
+    async def bulk_role_update(self,request: StudentBulkRequest,role: UserRoleEnum) -> StudentBulkResponse:
         pass
 
 class StudentService:
