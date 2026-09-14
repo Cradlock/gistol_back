@@ -76,7 +76,7 @@ async def delete_students(
 ):
     return  await service.delete_students(ids)
 
-@router.post("/recover",response_model=StudentBulkResponse)
+@router.post("/recovery",response_model=StudentBulkResponse)
 async def recovery_students(
         admin: User = Depends(get_current_teacher),
         service: StudentService = Depends(get_student_service),
