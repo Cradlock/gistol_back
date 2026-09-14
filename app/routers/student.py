@@ -51,17 +51,17 @@ async def student_patch(
 
 @router.post("/confirm",response_model=StudentBulkResponse)
 async def confirm_students(
+        ids: StudentBulkRequest,
         admin: User = Depends(get_current_teacher),
         service: StudentService = Depends(get_student_service),
-        ids: StudentBulkRequest = Depends()
         ):
     return await service.confirm_students(ids)
 
 @router.post("/unconfirm",response_model=StudentBulkResponse)
 async def unconfirm_students(
+        ids: StudentBulkRequest,
         admin: User = Depends(get_current_teacher),
         service: StudentService = Depends(get_student_service),
-        ids: StudentBulkRequest = Depends()
         ):
     return await service.unconfirm_students(ids)
 
@@ -69,18 +69,17 @@ async def unconfirm_students(
 
 @router.delete("/delete",response_model=StudentBulkResponse)
 async def delete_students(
+        ids: StudentBulkRequest,  
         admin: User = Depends(get_current_teacher),
         service: StudentService = Depends(get_student_service),
-        ids: StudentBulkRequest = Depends()
- 
 ):
     return  await service.delete_students(ids)
 
 @router.post("/recovery",response_model=StudentBulkResponse)
 async def recovery_students(
+        ids: StudentBulkRequest,
         admin: User = Depends(get_current_teacher),
         service: StudentService = Depends(get_student_service),
-        ids: StudentBulkRequest = Depends()
  
 ):
     return  await service.recovery_students(ids)
