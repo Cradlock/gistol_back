@@ -1,50 +1,59 @@
-
-
-
-
 from datetime import datetime
+import enum
 from typing import final
 
-from sqlalchemy import Enum, DateTime, ForeignKey, String
-from sqlalchemy.orm import Mapped, mapped_column
+from sqlalchemy import DateTime, Enum, ForeignKey, String, UniqueConstraint
+from sqlalchemy.orm import Mapped, mapped_column, relationship
+
 from app.models.base import Base
-from app.models.years import Year
+from app.models.groups import Group
+
+
+class StudentAnswerStatus(str, enum.Enum):
+    PENDING = "pending"
+    POSITIVE = "positive"
+    NEGATIVE = "negative"
+
 
 @final
 class SituationsTask(Base):
-    __tablename__ = "situations_task" 
-    
+    __tablename__ = "situations_task"
+
     id: Mapped[int] = mapped_column(primary_key=True)
     title: Mapped[str] = mapped_column(String(255))
-    
+    group_id: Mapped[int] = mapped_column(ForeignKey("groups.id"), index=True)
+
     start_at: Mapped[datetime] = mapped_column(DateTime(timezone=True))
+    end_at: Mapped[datetime] = mapped_column(DateTime(timezone=True))
+    points: Mapped[int] = mapped_column()
 
-    duration_min: Mapped[int] = mapped_column()
-
+    group: Mapped[Group] = relationship()
+    answers: Mapped[list["StudentAnswerTask"]] = relationship(
+        back_populates="task",
+        cascade="all, delete-orphan",
+    )
 
 
 @final
 class StudentAnswerTask(Base):
     __tablename__ = "student_answer_task"
-    
-    id: Mapped[int] = mapped_column(primary_key=True)
+    __table_args__ = (
+        UniqueConstraint("user_id", "task_id", name="uq_student_task_answer"),
+    )
 
+    id: Mapped[int] = mapped_column(primary_key=True)
     user_id: Mapped[int] = mapped_column(ForeignKey("users.id"))
-    task_id: Mapped[int] = mapped_column(ForeignKey("situations_task.id"))
-
+    task_id: Mapped[int] = mapped_column(
+        ForeignKey("situations_task.id", ondelete="CASCADE")
+    )
     text: Mapped[str] = mapped_column(String(255))
+    status: Mapped[StudentAnswerStatus] = mapped_column(
+        Enum(
+            StudentAnswerStatus,
+            name="student_answer_status",
+            values_callable=lambda items: [item.value for item in items],
+        ),
+        default=StudentAnswerStatus.PENDING,
+    )
 
-@final 
-class TaskTargets(Base):
-    __tablename__ = "task_targets"
-    
-
-    id: Mapped[int] = mapped_column(primary_key=True)
-    task_id: Mapped[int] = mapped_column(ForeignKey("situations_task.id", ondelete="CASCADE"))
-
-    group_id: Mapped[int | None] = mapped_column(ForeignKey("groups.id"), nullable=True)
-    year: Mapped[Year] = mapped_column(Enum(Year), nullable=True)
-
-
-
-
+    task: Mapped[SituationsTask] = relationship(back_populates="answers")

@@ -5,6 +5,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.data.auth import AuthDataSQLAlchemy
 from app.data.groups import GroupDataSQLAlchemy
 from app.data.student import StudentDataSQLAlchemy
+from app.data.task import TaskDataSQLAlchemy
 from app.db import AsyncSessionLocal
 from fastapi import Depends, Request
 from app.core import * 
@@ -13,6 +14,7 @@ from app.models.user import User, UserRoleEnum
 from app.services.auth import AuthService
 from app.services.groups import GroupService
 from app.services.student import StudentService
+from app.services.task import TaskService
 # Сессия в дб
 async def get_db():
     async with AsyncSessionLocal() as session:
@@ -43,6 +45,14 @@ def get_student_service(
     repo: StudentDataSQLAlchemy = Depends(get_student_repo)
 ) -> StudentService:    
     return StudentService(repo)
+
+def get_task_repo(db: AsyncSession = Depends(get_db)):
+    return TaskDataSQLAlchemy(db)
+
+def get_task_service(
+    repo: TaskDataSQLAlchemy = Depends(get_task_repo)
+) -> TaskService:
+    return TaskService(repo)
 
 async def get_raw_token(request: Request) -> str: 
     auth_header = request.headers.get('Authorization');

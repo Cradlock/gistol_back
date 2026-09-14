@@ -1,18 +1,16 @@
-from sys import prefix
-
 from fastapi import FastAPI
-
-from app.init import lifespan
-from app.routers.auth import router as AuthRouter
-from app.routers.groups import router as GroupRouter 
-from app.routers.task import router as TaskRouter 
-from app.routers.years import router as YearRouter
-from app.routers.student import router as StudentRouter
 from fastapi.middleware.cors import CORSMiddleware
 
-app = FastAPI(
-    lifespan=lifespan
-)
+from app.core.errors import register_error_handlers
+from app.init import lifespan
+from app.routers.auth import router as AuthRouter
+from app.routers.groups import router as GroupRouter
+from app.routers.student import router as StudentRouter
+from app.routers.task import router as TaskRouter
+from app.routers.years import router as YearRouter
+
+app = FastAPI(lifespan=lifespan)
+register_error_handlers(app)
 
 app.add_middleware(
     CORSMiddleware,
