@@ -4,7 +4,7 @@ from fastapi import APIRouter, Depends
 from app.dependencies import get_auth_service, get_current_teacher, get_current_user, get_student_repo, get_student_service
 from app.models.user import User
 from app.schemas.auth import UserResponse
-from app.schemas.students import StudentComplete, StudentFilterParams, StudentsResponseList
+from app.schemas.students import StudentBulkRequest, StudentBulkResponse, StudentComplete, StudentFilterParams, StudentUpdate, StudentsResponseList
 from app.services.auth import AuthService
 from app.services.student import StudentService
 
@@ -42,9 +42,50 @@ async def complete_student(
 ## Изменения студента 
 @router.patch("/{user_id}",response_model=UserResponse)
 async def student_patch(
-        user_id:int 
+    user_id:int,
+    data: StudentUpdate = Depends(),
+    admin: User = Depends(get_current_teacher),
+    service: StudentService = Depends(get_student_service)
 ):
-    pass 
+    return service.edit_student(user_id, data) 
+
+@router.post("/confirm",response_model=StudentBulkResponse)
+async def confirm_students(
+        admin: User = Depends(get_current_teacher),
+        service: StudentService = Depends(get_student_service),
+        ids: StudentBulkRequest = Depends()
+        ):
+    return await service.confirm_students(ids)
+
+@router.post("/unconfirm",response_model=StudentBulkResponse)
+async def unconfirm_students(
+        admin: User = Depends(get_current_teacher),
+        service: StudentService = Depends(get_student_service),
+        ids: StudentBulkRequest = Depends()
+        ):
+    return await service.unconfirm_students(ids)
+
+
+
+@router.delete("/delete",response_model=StudentBulkResponse)
+async def delete_students(
+        admin: User = Depends(get_current_teacher),
+        service: StudentService = Depends(get_student_service),
+        ids: StudentBulkRequest = Depends()
+ 
+):
+    return  await service.delete_students(ids)
+
+@router.post("/recover",response_model=StudentBulkResponse)
+async def recovery_students(
+        admin: User = Depends(get_current_teacher),
+        service: StudentService = Depends(get_student_service),
+        ids: StudentBulkRequest = Depends()
+ 
+):
+    return  await service.recovery_students(ids)
+
+
 
 
 ## Поиск студента

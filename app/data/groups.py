@@ -30,9 +30,7 @@ class GroupDataSQLAlchemy(GroupDataAsbtract):
             try:
                 return await func(self, *args, **kwargs)
             except IntegrityError:
-                # Делаем rollback сессии прямо в репозитории
                 await self.db.rollback()
-                # Возвращаем готовое исключение с 409 статусом (или можно бросать кастомное)
                 raise conflict_exception("Запись с такими данными уже существует")
     
         return wrapper

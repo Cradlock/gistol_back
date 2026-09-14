@@ -15,7 +15,14 @@ class StudentUpdate(BaseModel):
     group_id: int 
     year: Year
     scores: int 
-     
+
+class StudentBulkRequest(BaseModel):
+    ids: list[int]
+
+class StudentBulkResponse(BaseModel):
+    completed: list[int]
+    faileds: list[int]
+
 
 class StudentComplete(BaseModel):
     surname: str 

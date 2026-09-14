@@ -8,8 +8,8 @@ from app.data.student import StudentDataSQLAlchemy
 from app.db import AsyncSessionLocal
 from fastapi import Depends, Request
 from app.core import * 
-from app.models.user import User, UserRoleEnum
 from app.core.config import settings
+from app.models.user import User, UserRoleEnum
 from app.services.auth import AuthService
 from app.services.groups import GroupService
 from app.services.student import StudentService

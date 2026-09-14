@@ -6,46 +6,18 @@ from sqlalchemy import func, select, update
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import joinedload
 
+from app.core.exceptions import not_found_exception
 from app.models.user import User, UserRoleEnum
 from app.schemas.auth import UserResponse
-from app.schemas.students import StudentComplete, StudentFilterParams, StudentsResponseList
+from app.schemas.students import StudentBulkRequest, StudentBulkResponse, StudentComplete, StudentFilterParams, StudentUpdate, StudentsResponseList
 from app.services.student import StudentDataAbstract
-import math 
+
 
 class StudentDataSQLAlchemy(StudentDataAbstract):
     
     def __init__(self,db:AsyncSession) -> None:
         self.db = db 
-
-
-    @override
-    async def confirm_student(self, user_id: int):
-        return await super().confirm_student(user_id)
-    @override
-    async def complete_student(self, user_id: int, data: StudentComplete) -> User:
-        stmt = (
-            update(User)
-            .where(User.id == user_id)
-            .values(
-                name=data.name,
-                surname=data.surname,
-                group_id=data.group_id
-            )
-            .returning(User)
-        )
-        result = await self.db.execute(stmt)
-        updated_user = result.scalars().first()
-        
-        await self.db.commit()
-        
-        # Подгружаем атрибуты/связи объекта
-        await self.db.refresh(updated_user, attribute_names=['group'])
-        if updated_user is None:
-            raise Exception()
-
-        return updated_user
-
-
+    
     @override
     async def search_students(self, data: StudentFilterParams) -> StudentsResponseList:
         # Базовый запрос
@@ -106,3 +78,67 @@ class StudentDataSQLAlchemy(StudentDataAbstract):
             students=[UserResponse.model_validate(user) for user in users],
             total=total
         )
+
+    @override
+    async def complete_student(self,user_id:int, data: StudentComplete) -> User:
+        stmt = (
+            update(User)
+            .where(User.id == user_id)
+            .values(
+                name=data.name,
+                surname=data.surname,
+                group_id=data.group_id
+            )
+            .returning(User) # Возвращаем обновленный объект модели
+        )
+        
+        result = await self.db.execute(stmt)
+        await self.db.commit()
+        
+        updated_user = result.scalars().first()
+        if updated_user is None:
+            raise not_found_exception("Student not found")
+        return updated_user
+
+    @override
+    async def edit_student(self, student_id: int, data: StudentUpdate) -> UserResponse:
+        stmt = (
+        update(User)
+        .where(User.id == student_id)
+        .values(**data.model_dump(exclude_unset=True))
+        .returning(User)
+        )
+        result = await self.db.execute(stmt)
+        updated_user = result.scalar_one_or_none()
+    
+        await self.db.commit()
+        return UserResponse.model_validate(updated_user)
+
+    @override 
+    async def bulk_role_update(self,ids: StudentBulkRequest,role: UserRoleEnum) -> StudentBulkResponse:
+        if not ids:
+            return [], []
+
+        stmt = (
+            update(User)
+            .where(User.id.in_(ids))
+            .values(role=role)
+            .returning(User.id) # База вернет только ID тех, кто реально обновился
+        )
+        result = await self.db.execute(stmt)
+        
+        # Получаем плоский список успешно обновленных ID
+        updated_ids = list(result.scalars().all())
+        
+        faileds = []
+        for i in updated_ids:
+            if i not in updated_ids:
+                faileds.append(i) 
+        # 5. Фиксируем транзакцию
+        await self.db.commit()
+        
+        return StudentBulkResponse(
+            completed=updated_ids,
+            faileds=faileds
+        )
+
