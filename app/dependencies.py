@@ -101,6 +101,13 @@ async def get_current_student(
         return user 
     raise bad_request_exception("User not confirmed")
 
+async def get_current_student_or_higher(
+    user: User = Depends(get_current_user),
+) -> User:
+    if user.role >= UserRoleEnum.STUDENT:
+        return user
+    raise forbidden_exception(detail="Student role or higher required")
+
 async def get_current_teacher(
     current_user: User = Depends(get_current_user)  # Твоя текущая зависимость проверки JWT
 ) -> User:

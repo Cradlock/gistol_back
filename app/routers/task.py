@@ -1,11 +1,17 @@
 from fastapi import APIRouter, Depends, Query, status
 
-from app.dependencies import get_current_teacher, get_task_service
+from app.dependencies import (
+    get_current_student_or_higher,
+    get_current_teacher,
+    get_task_service,
+)
 from app.models.user import User
 from app.schemas.task import (
     AnswerListResponse,
+    AnswerHistoryListResponse,
     AnswerResponse,
     AnswerReview,
+    AnswerSubmit,
     TaskCreate,
     TaskListResponse,
     TaskResponse,
@@ -17,6 +23,25 @@ router = APIRouter(
     prefix="/task",
     tags=["Tasks"],
 )
+
+@router.get("/available", response_model=TaskListResponse)
+async def list_available_tasks(
+    page: int = Query(default=1, ge=1),
+    page_size: int = Query(default=20, ge=1, le=100),
+    current_user: User = Depends(get_current_student_or_higher),
+    service: TaskService = Depends(get_task_service),
+):
+    return await service.list_available_tasks(current_user, page, page_size)
+
+
+@router.get("/history", response_model=AnswerHistoryListResponse)
+async def get_answer_history(
+    page: int = Query(default=1, ge=1),
+    page_size: int = Query(default=20, ge=1, le=100),
+    current_user: User = Depends(get_current_student_or_higher),
+    service: TaskService = Depends(get_task_service),
+):
+    return await service.get_answer_history(current_user, page, page_size)
 
 
 @router.get("/", response_model=TaskListResponse)
@@ -35,6 +60,20 @@ async def create_task(
     service: TaskService = Depends(get_task_service),
 ):
     return await service.create_task(data.model_dump())
+
+
+@router.post(
+    "/{task_id}/answer",
+    response_model=AnswerResponse,
+    status_code=status.HTTP_201_CREATED,
+)
+async def submit_answer(
+    task_id: int,
+    data: AnswerSubmit,
+    current_user: User = Depends(get_current_student_or_higher),
+    service: TaskService = Depends(get_task_service),
+):
+    return await service.submit_answer(task_id, current_user, data.text)
 
 
 @router.patch("/answers/{answer_id}", response_model=AnswerResponse)

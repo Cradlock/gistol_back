@@ -2,7 +2,7 @@ from datetime import datetime
 import enum
 from typing import final
 
-from sqlalchemy import DateTime, Enum, ForeignKey, String, UniqueConstraint
+from sqlalchemy import DateTime, Enum, ForeignKey, String, UniqueConstraint, func
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.models.base import Base
@@ -21,6 +21,7 @@ class SituationsTask(Base):
 
     id: Mapped[int] = mapped_column(primary_key=True)
     title: Mapped[str] = mapped_column(String(255))
+    content: Mapped[str] = mapped_column(String(4000))
     group_id: Mapped[int] = mapped_column(ForeignKey("groups.id"), index=True)
 
     start_at: Mapped[datetime] = mapped_column(DateTime(timezone=True))
@@ -47,6 +48,12 @@ class StudentAnswerTask(Base):
         ForeignKey("situations_task.id", ondelete="CASCADE")
     )
     text: Mapped[str] = mapped_column(String(255))
+    submitted_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True),
+        server_default=func.now(),
+        nullable=False,
+        index=True,
+    )
     status: Mapped[StudentAnswerStatus] = mapped_column(
         Enum(
             StudentAnswerStatus,
