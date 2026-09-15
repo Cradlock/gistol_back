@@ -1,4 +1,5 @@
 from fastapi import APIRouter, Depends, Query, status
+from app.core.query import OptionalIntQuery
 
 from app.dependencies import (
     get_current_student_or_higher,
@@ -46,7 +47,7 @@ async def get_answer_history(
 
 @router.get("/", response_model=TaskListResponse)
 async def list_tasks(
-    group_id: int | None = Query(default=None, description="Фильтр по группе"),
+    group_id: OptionalIntQuery = None,
     admin: User = Depends(get_current_teacher),
     service: TaskService = Depends(get_task_service),
 ):

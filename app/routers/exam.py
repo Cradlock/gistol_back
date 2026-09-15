@@ -1,4 +1,5 @@
 from fastapi import APIRouter, Depends, Query, status
+from app.core.query import OptionalIntQuery
 
 from app.dependencies import (
     get_current_student_or_higher,
@@ -116,7 +117,7 @@ async def list_exams(
     page: int = Query(1, ge=1),
     page_size: int = Query(20, ge=1, le=100),
     search: str | None = Query(None, max_length=250),
-    group_id: int | None = Query(default=None),
+    group_id: OptionalIntQuery = None,
     _teacher: User = Depends(get_current_teacher),
     service: ExamService = Depends(get_exam_service),
 ):
