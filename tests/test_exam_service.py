@@ -91,11 +91,41 @@ class ExamServiceTests(unittest.IsolatedAsyncioTestCase):
         self.assertEqual(raised.exception.status_code, 400)
 
     async def test_start_rejects_duplicate_session(self):
-        self.repo.exam = exam_at(datetime.now(timezone.utc) - timedelta(minutes=5))
-        self.repo.duplicate = SimpleNamespace(id=1)
+        now = datetime.now(timezone.utc)
+        self.repo.exam = exam_at(now - timedelta(minutes=5))
+        self.repo.duplicate = SimpleNamespace(
+            id=1,
+            status=ExamSessionStatus.SUBMITTED,
+            started_at=now,
+        )
         with self.assertRaises(HTTPException) as raised:
             await self.service.start_session(3, self.user)
         self.assertEqual(raised.exception.status_code, 409)
+
+    async def test_start_resumes_started_session(self):
+        now = datetime.now(timezone.utc)
+        self.repo.exam = exam_at(now - timedelta(minutes=5))
+        self.repo.duplicate = SimpleNamespace(
+            id=12,
+            status=ExamSessionStatus.STARTED,
+            started_at=now,
+        )
+
+        response = await self.service.start_session(3, self.user)
+
+        self.assertEqual(response.id, 12)
+        self.assertEqual(response.status, ExamSessionStatus.STARTED)
+
+    async def test_history_is_scoped_to_current_user(self):
+        self.repo.history_call = None
+
+        async def list_history(user_id, page, page_size):
+            self.repo.history_call = (user_id, page, page_size)
+            return [], 0
+
+        self.repo.list_history = list_history
+        await self.service.list_history(self.user, page=2, page_size=20)
+        self.assertEqual(self.repo.history_call, (7, 2, 20))
 
     async def test_take_checks_student_ownership(self):
         exam = exam_at(datetime.now(timezone.utc) - timedelta(minutes=5))
@@ -156,6 +186,43 @@ class ExamValidationAndGradingTests(unittest.TestCase):
         payload = ExamService._question(question, teacher=False).model_dump()
         self.assertNotIn("expected_answer", payload)
         self.assertNotIn("is_correct", payload["choices"][0])
+
+    def test_student_history_does_not_expose_answer_key(self):
+        now = datetime.now(timezone.utc)
+        session = SimpleNamespace(
+            id=4,
+            exam_id=3,
+            status=ExamSessionStatus.SUBMITTED,
+            started_at=now,
+            submitted_at=now,
+            reviewed_at=now,
+            score=2,
+            exam=SimpleNamespace(title="Exam", theme="Theme"),
+            structured_answers=[
+                SimpleNamespace(
+                    id=8,
+                    question_id=1,
+                    choice_id=4,
+                    text=None,
+                    awarded_points=2,
+                    question=SimpleNamespace(
+                        id=1,
+                        text="Question",
+                        type=QuestionType.CHOISE,
+                        points=2,
+                        position=0,
+                    ),
+                    choice=SimpleNamespace(id=4, text="Answer", is_correct=True),
+                )
+            ],
+        )
+
+        payload = ExamService._student_history(session).model_dump()
+
+        self.assertEqual(payload["answers"][0]["choice_text"], "Answer")
+        self.assertNotIn("expected_answer", payload["answers"][0])
+        self.assertNotIn("is_correct", payload["answers"][0])
+        self.assertNotIn("choices", payload["answers"][0])
 
     def test_choice_requires_two_options_and_one_correct(self):
         with self.assertRaises(ValidationError):

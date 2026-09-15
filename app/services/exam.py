@@ -22,7 +22,11 @@ from app.schemas.exam import (
     SessionSummary,
     SessionTakeResponse,
     StudentChoiceResponse,
+    StudentHistoryAnswer,
+    StudentHistoryItem,
+    StudentHistoryListResponse,
     StudentQuestionResponse,
+    StudentSavedAnswer,
     TargetResponse,
     TeacherAnswerResponse,
     TeacherSessionDetail,
@@ -234,8 +238,17 @@ class ExamService:
             raise forbidden_exception("Exam is not targeted to this student")
         if now < exam.start_at or now >= self._deadline(exam):
             raise bad_request_exception("Exam is not available at this time")
-        if await self.repo.get_session_for_user_exam(user.id, exam_id) is not None:
-            raise conflict_exception("Exam session already exists")
+        existing = await self.repo.get_session_for_user_exam(user.id, exam_id)
+        if existing is not None:
+            if existing.status != ExamSessionStatus.STARTED:
+                raise conflict_exception("Exam session already exists")
+            return SessionStartResponse(
+                id=existing.id,
+                exam_id=exam.id,
+                status=existing.status,
+                started_at=existing.started_at,
+                deadline=self._deadline(exam),
+            )
         try:
             session = await self.repo.create_session(user.id, exam_id, now)
         except DuplicateError:
@@ -272,6 +285,21 @@ class ExamService:
             title=exam.title,
             theme=exam.theme,
             questions=[self._question(q, teacher=False) for q in exam.questions],
+            answers=[
+                StudentSavedAnswer(
+                    question_id=answer.question_id,
+                    choice_id=answer.choice_id,
+                    text=answer.text,
+                )
+                for answer in session.structured_answers
+            ],
+        )
+
+    async def list_history(self, user: User, page: int, page_size: int):
+        sessions, total = await self.repo.list_history(user.id, page, page_size)
+        return StudentHistoryListResponse(
+            total=total,
+            sessions=[self._student_history(session) for session in sessions],
         )
 
     async def save_answer(
@@ -355,6 +383,38 @@ class ExamService:
             id=session.id,
             user_id=session.user_id,
             student_name=session.user.fio,
+            exam_id=session.exam_id,
+            exam_title=session.exam.title,
+            exam_theme=session.exam.theme,
+            status=session.status,
+            started_at=session.started_at,
+            submitted_at=session.submitted_at,
+            reviewed_at=session.reviewed_at,
+            score=session.score,
+            answers=answers,
+        )
+
+    @staticmethod
+    def _student_history(session):
+        answers = []
+        for answer in sorted(
+            session.structured_answers, key=lambda item: (item.question.position, item.id)
+        ):
+            question = answer.question
+            answers.append(
+                StudentHistoryAnswer(
+                    question_id=question.id,
+                    question_text=question.text,
+                    question_type=question.type,
+                    question_points=question.points,
+                    choice_id=answer.choice_id,
+                    choice_text=answer.choice.text if answer.choice else None,
+                    text=answer.text,
+                    awarded_points=answer.awarded_points,
+                )
+            )
+        return StudentHistoryItem(
+            id=session.id,
             exam_id=session.exam_id,
             exam_title=session.exam.title,
             exam_theme=session.exam.theme,

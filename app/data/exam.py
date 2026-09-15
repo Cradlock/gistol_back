@@ -217,8 +217,18 @@ class ExamDataSQLAlchemy:
             )
             .exists()
         )
+        finished_exists = (
+            select(ExamSession.id)
+            .where(
+                ExamSession.exam_id == Exam.id,
+                ExamSession.user_id == user.id,
+                ExamSession.status != ExamSessionStatus.STARTED,
+            )
+            .exists()
+        )
         base = select(Exam).where(
             target_exists,
+            ~finished_exists,
             Exam.start_at <= now,
             Exam.start_at + Exam.duration_minutes * func.make_interval(0, 0, 0, 0, 0, 1) > now,
         )
@@ -302,6 +312,32 @@ class ExamDataSQLAlchemy:
         await self.db.commit()
         await self.db.refresh(answer)
         return answer
+
+    async def list_history(self, user_id: int, page: int, page_size: int):
+        base = select(ExamSession).where(
+            ExamSession.user_id == user_id,
+            ExamSession.status != ExamSessionStatus.STARTED,
+        )
+        total = (
+            await self.db.execute(select(func.count()).select_from(base.subquery()))
+        ).scalar_one()
+        result = await self.db.execute(
+            base.options(
+                selectinload(ExamSession.exam),
+                selectinload(ExamSession.structured_answers)
+                .selectinload(ExamSessionAnswer.question),
+                selectinload(ExamSession.structured_answers).selectinload(
+                    ExamSessionAnswer.choice
+                ),
+            )
+            .order_by(
+                ExamSession.submitted_at.desc().nulls_last(),
+                ExamSession.id.desc(),
+            )
+            .offset((page - 1) * page_size)
+            .limit(page_size)
+        )
+        return list(result.scalars()), total
 
     async def list_sessions(self, exam_id: int):
         if await self.get_exam(exam_id) is None:

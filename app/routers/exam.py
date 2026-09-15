@@ -21,6 +21,7 @@ from app.schemas.exam import (
     SessionStartResponse,
     SessionSubmitResponse,
     SessionTakeResponse,
+    StudentHistoryListResponse,
     TargetResponse,
     TargetWrite,
     TeacherSessionDetail,
@@ -39,6 +40,16 @@ async def available_exams(
     service: ExamService = Depends(get_exam_service),
 ):
     return await service.list_available(user, page, page_size)
+
+
+@router.get("/history", response_model=StudentHistoryListResponse)
+async def exam_history(
+    page: int = Query(1, ge=1),
+    page_size: int = Query(20, ge=1, le=100),
+    user: User = Depends(get_current_student_or_higher),
+    service: ExamService = Depends(get_exam_service),
+):
+    return await service.list_history(user, page, page_size)
 
 
 @router.get("/sessions/{session_id}", response_model=TeacherSessionDetail)

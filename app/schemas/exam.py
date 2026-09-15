@@ -138,10 +138,17 @@ class SessionStartResponse(BaseModel):
     deadline: datetime
 
 
+class StudentSavedAnswer(BaseModel):
+    question_id: int
+    choice_id: int | None = None
+    text: str | None = None
+
+
 class SessionTakeResponse(SessionStartResponse):
     title: str
     theme: str
     questions: list[StudentQuestionResponse]
+    answers: list[StudentSavedAnswer] = Field(default_factory=list)
 
 
 class SessionSubmitResponse(BaseModel):
@@ -208,3 +215,32 @@ class TeacherSessionDetail(BaseModel):
     reviewed_at: datetime | None
     score: int | None
     answers: list[TeacherAnswerResponse]
+
+
+class StudentHistoryAnswer(BaseModel):
+    question_id: int
+    question_text: str
+    question_type: QuestionType
+    question_points: int
+    choice_id: int | None = None
+    choice_text: str | None = None
+    text: str | None = None
+    awarded_points: int | None = None
+
+
+class StudentHistoryItem(BaseModel):
+    id: int
+    exam_id: int
+    exam_title: str
+    exam_theme: str
+    status: ExamSessionStatus
+    started_at: datetime
+    submitted_at: datetime | None
+    reviewed_at: datetime | None
+    score: int | None
+    answers: list[StudentHistoryAnswer]
+
+
+class StudentHistoryListResponse(BaseModel):
+    total: int
+    sessions: list[StudentHistoryItem]
