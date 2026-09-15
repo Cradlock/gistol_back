@@ -105,10 +105,11 @@ async def list_exams(
     page: int = Query(1, ge=1),
     page_size: int = Query(20, ge=1, le=100),
     search: str | None = Query(None, max_length=250),
+    group_id: int | None = Query(default=None),
     _teacher: User = Depends(get_current_teacher),
     service: ExamService = Depends(get_exam_service),
 ):
-    return await service.list_exams(page, page_size, search)
+    return await service.list_exams(page, page_size, search, group_id)
 
 
 @router.post("/", response_model=ExamResponse, status_code=status.HTTP_201_CREATED)

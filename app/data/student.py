@@ -95,14 +95,21 @@ class StudentDataSQLAlchemy:
             update(User)
             .where(User.id == student_id)
             .values(**data.model_dump(exclude_unset=True))
-            .returning(User)
+            .returning(User.id)
         )
         result = await self.db.execute(stmt)
-        updated_user = result.scalar_one_or_none()
-        await self.db.commit()
-
-        if updated_user is None:
+        updated_id = result.scalar_one_or_none()
+        if updated_id is None:
+            await self.db.rollback()
             raise NotFoundError("Student not found")
+
+        await self.db.commit()
+        loaded = await self.db.execute(
+            select(User)
+            .options(joinedload(User.group))
+            .where(User.id == updated_id)
+        )
+        updated_user = loaded.unique().scalar_one()
         return UserResponse.model_validate(updated_user)
 
     @handle_integrity_error

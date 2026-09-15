@@ -1,6 +1,6 @@
 from datetime import datetime
 
-from sqlalchemy import delete, func, or_, select, update
+from sqlalchemy import and_, delete, func, or_, select, update
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 
@@ -52,11 +52,36 @@ class ExamDataSQLAlchemy:
         )
         return result.scalar_one_or_none()
 
-    async def list_exams(self, page: int, page_size: int, search: str | None):
+    async def list_exams(
+        self,
+        page: int,
+        page_size: int,
+        search: str | None,
+        group_id: int | None = None,
+    ):
         base = select(Exam)
         if search:
             pattern = f"%{search.strip()}%"
             base = base.where(or_(Exam.title.ilike(pattern), Exam.theme.ilike(pattern)))
+        if group_id is not None:
+            group = await self.get_group(group_id)
+            if group is None:
+                return [], 0
+            target_match = (
+                select(ExamTargets.id)
+                .where(
+                    ExamTargets.exam_id == Exam.id,
+                    or_(
+                        ExamTargets.group_id == group_id,
+                        and_(
+                            ExamTargets.group_id.is_(None),
+                            ExamTargets.year == group.year,
+                        ),
+                    ),
+                )
+                .exists()
+            )
+            base = base.where(target_match)
         total = (await self.db.execute(select(func.count()).select_from(base.subquery()))).scalar_one()
         rows = await self.db.execute(
             base.order_by(Exam.start_at.desc(), Exam.id.desc())

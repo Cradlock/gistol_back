@@ -10,11 +10,11 @@ from app.schemas.auth import UserResponse
 
 
 class StudentUpdate(BaseModel):
-    surname: str 
-    name: str 
-    group_id: int 
+    surname: str = Field(min_length=1, max_length=50)
+    name: str = Field(min_length=1, max_length=50)
+    group_id: int
     year: Year
-    scores: int 
+    scores: int = Field(ge=0) 
 
 class StudentBulkRequest(BaseModel):
     ids: list[int]

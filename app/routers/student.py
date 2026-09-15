@@ -39,15 +39,15 @@ async def complete_student(
 # Логика для админа
 
 
-## Изменения студента 
-@router.patch("/{user_id}",response_model=UserResponse)
+## Изменения студента
+@router.patch("/{user_id}", response_model=UserResponse)
 async def student_patch(
-    user_id:int,
-    data: StudentUpdate = Depends(),
+    user_id: int,
+    data: StudentUpdate,
     admin: User = Depends(get_current_teacher),
-    service: StudentService = Depends(get_student_service)
+    service: StudentService = Depends(get_student_service),
 ):
-    return service.edit_student(user_id, data) 
+    return await service.edit_student(user_id, data) 
 
 @router.post("/confirm",response_model=StudentBulkResponse)
 async def confirm_students(

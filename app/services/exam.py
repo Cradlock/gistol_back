@@ -93,8 +93,14 @@ class ExamService:
             deadline=cls._deadline(exam),
         )
 
-    async def list_exams(self, page: int, page_size: int, search: str | None):
-        exams, total = await self.repo.list_exams(page, page_size, search)
+    async def list_exams(
+        self,
+        page: int,
+        page_size: int,
+        search: str | None,
+        group_id: int | None = None,
+    ):
+        exams, total = await self.repo.list_exams(page, page_size, search, group_id)
         return ExamListResponse(total=total, exams=[self._summary(e) for e in exams])
 
     async def create_exam(self, values: dict):
