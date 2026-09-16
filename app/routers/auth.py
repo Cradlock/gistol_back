@@ -20,7 +20,12 @@ async def telegram_auth(
     data : TelegramAuthRequest,
     service: AuthService = Depends(get_auth_service)
 ):
-    return await service.get_telegram_user(data.id_token) 
+    result = await service.get_telegram_user(data.id_token)
+    return TelegramAuthResponse(
+        access_token=result["access_token"],
+        refresh_token=result["refresh_token"],
+        user=UserResponse.model_validate(result["user"]),
+    ) 
 
 
 # обновление токена 

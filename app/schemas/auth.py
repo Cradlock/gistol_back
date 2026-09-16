@@ -17,11 +17,12 @@ class UserCreate(BaseModel):
 
 class UserResponse(BaseModel):
     id: int
-    name: str | None 
-    surname: str | None 
-    scores: int | None 
-    year: int | None 
-    group: GroupResponse | None
+    name: str | None
+    surname: str | None
+    scores: int | None
+    year: int | None = None
+    group_id: int | None = None
+    group: GroupResponse | None = None
     role: int  
 
     @computed_field
@@ -46,7 +47,7 @@ class TelegramAuthRequest(BaseModel):
 class TelegramAuthResponse(BaseModel):
     access_token: str 
     refresh_token: str
-    user: UserResponse | None
+    user: UserResponse
 
 
 # Refres logic 

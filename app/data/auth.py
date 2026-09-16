@@ -51,9 +51,13 @@ class AuthDataSQLAlchemy:
     async def create_user(self, user_data: dict[str, Any]) -> User:
         new_user = User(**user_data)
         self.db.add(new_user)
+        await self.db.flush()
+        user_id = new_user.id
         await self.db.commit()
-        await self.db.refresh(new_user)
-        return new_user
+        loaded = await self.get_by_id(user_id)
+        if loaded is None:
+            raise RuntimeError("Failed to reload created user")
+        return loaded
 
     @handle_integrity_error
     async def update_user(self, user_id: int, update_data: dict[str, Any]) -> Optional[User]:

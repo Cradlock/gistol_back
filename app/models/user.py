@@ -52,13 +52,14 @@ class User(Base):
     group_id: Mapped[Optional[int]] = mapped_column(ForeignKey("groups.id"))
     year: Mapped[Optional[Year]] = mapped_column(Enum(Year),default=Year.FIRST)
  
-    # Это relationship,тут же все понятно зачем чето еще писать
-    group: Mapped["Group"] = relationship(back_populates="users")
-     
-    # Виртуальная колонка   
+    group: Mapped[Optional["Group"]] = relationship(back_populates="users")
+
     fio: Mapped[str] = mapped_column(
-        String(105), 
-        Computed("name || ' ' || surname", persisted=True)
+        String(105),
+        Computed(
+            "COALESCE(name, '') || ' ' || COALESCE(surname, '')",
+            persisted=True,
+        ),
     )
 # Чистые Python-свойства для использования в сервисах/ORМ
     @property

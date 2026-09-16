@@ -4,6 +4,7 @@ from sqlalchemy.orm import joinedload
 
 from app.core.errors import NotFoundError
 from app.data.common import handle_integrity_error
+from app.models.groups import Group
 from app.models.user import User, UserRoleEnum
 from app.schemas.auth import UserResponse
 from app.schemas.students import (
@@ -71,6 +72,12 @@ class StudentDataSQLAlchemy:
 
     @handle_integrity_error
     async def complete_student(self, user_id: int, data: StudentComplete) -> User:
+        group = await self.db.get(Group, data.group_id)
+        if group is None:
+            raise NotFoundError("Group not found")
+        if group.year != data.year:
+            raise ValueError("Year must match the selected group")
+
         stmt = (
             update(User)
             .where(User.id == user_id)
@@ -78,16 +85,22 @@ class StudentDataSQLAlchemy:
                 name=data.name,
                 surname=data.surname,
                 group_id=data.group_id,
+                year=data.year,
             )
-            .returning(User)
+            .returning(User.id)
         )
         result = await self.db.execute(stmt)
+        updated_id = result.scalar_one_or_none()
+        if updated_id is None:
+            raise NotFoundError("Student not found")
         await self.db.commit()
 
-        updated_user = result.scalars().first()
-        if updated_user is None:
-            raise NotFoundError("Student not found")
-        return updated_user
+        loaded = await self.db.execute(
+            select(User)
+            .options(joinedload(User.group))
+            .where(User.id == updated_id)
+        )
+        return loaded.unique().scalar_one()
 
     @handle_integrity_error
     async def edit_student(self, student_id: int, data: StudentUpdate) -> UserResponse:

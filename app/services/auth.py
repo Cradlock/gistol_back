@@ -8,6 +8,7 @@ from app.core import (
     not_found_exception,
     internal_server_exception,
 )
+from app.core.errors import DuplicateError
 from app.core.security import create_access_token, create_refresh_token
 from app.data.auth import AuthDataSQLAlchemy
 from app.models.user import User, UserRoleEnum
@@ -44,11 +45,24 @@ class AuthService:
 
     async def get_telegram_user(self, id_token: str) -> dict:
         payload = await self.verify_telegram_token(id_token)
-        telegram_id = str(payload.get("id") or payload.get("sub"))
+        telegram_id = str(payload.get("id") or payload.get("sub") or "")
+        if not telegram_id:
+            raise unauthorized_exception("Telegram user id is missing")
 
         user = await self.repository.get_by_field("telegram_id", telegram_id)
         if user is None:
-            user = await self.repository.create_user({"telegram_id": telegram_id})
+            username = payload.get("username")
+            create_data: dict = {"telegram_id": telegram_id}
+            if isinstance(username, str) and username:
+                create_data["telegram_username"] = username
+            try:
+                user = await self.repository.create_user(create_data)
+            except DuplicateError:
+                user = await self.repository.get_by_field("telegram_id", telegram_id)
+                if user is None:
+                    raise
+        if user is None:
+            raise internal_server_exception("Failed to create Telegram user")
         if user.deleted:
             raise forbidden_exception("Account was deleted ")
 

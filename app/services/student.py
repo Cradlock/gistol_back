@@ -1,5 +1,5 @@
 from app.core.errors import NotFoundError
-from app.core.exceptions import not_found_exception
+from app.core.exceptions import bad_request_exception, not_found_exception
 from app.data.student import StudentDataSQLAlchemy
 from app.models.user import User, UserRoleEnum
 from app.schemas.auth import UserResponse
@@ -20,8 +20,10 @@ class StudentService:
     async def complete_student(self, user: User, data: StudentComplete) -> UserResponse:
         try:
             user = await self.repo.complete_student(user.id, data)
-        except NotFoundError:
-            raise not_found_exception("Student not found")
+        except NotFoundError as exc:
+            raise not_found_exception(exc.message)
+        except ValueError as exc:
+            raise bad_request_exception(str(exc))
         return UserResponse.model_validate(user)
 
     async def edit_student(self, user_id: int, data: StudentUpdate) -> UserResponse:
