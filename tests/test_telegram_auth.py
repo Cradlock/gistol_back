@@ -155,5 +155,38 @@ class CompleteStudentTests(unittest.IsolatedAsyncioTestCase):
         self.assertEqual(response.group.title, "BPI-231")
 
 
+class TelegramJwksFetchTests(unittest.TestCase):
+    def test_fetch_data_decodes_gzip_jwks(self):
+        import gzip
+        import json
+        from unittest.mock import patch
+
+        import httpx
+
+        from app.utils.jwks import TelegramJWKClient
+
+        payload = {"keys": []}
+        compressed = gzip.compress(json.dumps(payload).encode("utf-8"))
+        transport = httpx.MockTransport(
+            lambda request: httpx.Response(
+                200,
+                headers={
+                    "Content-Type": "application/json",
+                    "Content-Encoding": "gzip",
+                },
+                content=compressed,
+            )
+        )
+        real_client = httpx.Client
+
+        def fake_client(*args, **kwargs):
+            kwargs["transport"] = transport
+            return real_client(*args, **kwargs)
+
+        client = TelegramJWKClient("https://oauth.telegram.org/.well-known/jwks.json")
+        with patch("app.utils.jwks.httpx.Client", fake_client):
+            self.assertEqual(client.fetch_data(), payload)
+
+
 if __name__ == "__main__":
     unittest.main()

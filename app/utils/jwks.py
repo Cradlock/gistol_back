@@ -1,9 +1,20 @@
-from async_lru import alru_cache
+import httpx
+from jwt import PyJWKClient
+from jwt.exceptions import PyJWKClientConnectionError
 
-# Кэшируем результат сетевого запроса к JWKS Телеграма
-@alru_cache(ttl=86400) # Кэш на 24 часа
-async def fetch_telegram_jwks(url: str):
-    async with httpx.AsyncClient() as client:
-        response = await client.get(url)
-        response.raise_for_status()
-        return response.json()
+
+class TelegramJWKClient(PyJWKClient):
+    def fetch_data(self):
+        try:
+            with httpx.Client(timeout=self.timeout, headers=self.headers) as client:
+                response = client.get(self.uri)
+                response.raise_for_status()
+                jwk_set = response.json()
+        except httpx.HTTPError as exc:
+            raise PyJWKClientConnectionError(
+                f'Fail to fetch data from the url, err: "{exc}"'
+            ) from exc
+
+        if self.jwk_set_cache is not None:
+            self.jwk_set_cache.put(jwk_set)
+        return jwk_set

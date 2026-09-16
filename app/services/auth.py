@@ -1,5 +1,7 @@
 import jwt
-from jwt import PyJWKClient, PyJWTError
+from jwt import PyJWTError
+
+from app.utils.jwks import TelegramJWKClient
 
 from app.core import settings, verify_password
 from app.core import (
@@ -20,7 +22,10 @@ class AuthService:
         self.bot_client_id = settings.telegram_bot_client_id
         self.TELEGRAM_ISSUER = "https://oauth.telegram.org"
         self.TELEGRAM_JWKS_URL = "https://oauth.telegram.org/.well-known/jwks.json"
-        self._jwks_client = PyJWKClient(self.TELEGRAM_JWKS_URL, cache_keys=True)
+        self._jwks_client = TelegramJWKClient(
+            self.TELEGRAM_JWKS_URL,
+            cache_keys=True,
+        )
 
     async def verify_telegram_token(self, id_token: str) -> dict:
         try:
