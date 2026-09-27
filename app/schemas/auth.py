@@ -71,6 +71,27 @@ class AdminLoginResponse(BaseModel):
     refresh_token: str 
     user: UserResponse
 
+
+class AdminProfileResponse(BaseModel):
+    id: int
+    code: str | None = None
+    name: str | None = None
+    surname: str | None = None
+    role: int
+
+    class Config:
+        from_attributes = True
+
+
+class AdminCodeUpdateRequest(BaseModel):
+    current_password: str = Field(..., min_length=1)
+    code: str = Field(..., min_length=3, max_length=25)
+
+
+class AdminPasswordUpdateRequest(BaseModel):
+    current_password: str = Field(..., min_length=1)
+    new_password: str = Field(..., min_length=8, max_length=128)
+
 # Complete user logic 
 class CompleteUserRequest(BaseModel):
     name: str 

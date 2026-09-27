@@ -3,13 +3,16 @@ from jwt import PyJWTError
 
 from app.utils.jwks import TelegramJWKClient
 
-from app.core import settings, verify_password
+from app.core import settings, verify_password, hash_password
 from app.core import (
     unauthorized_exception,
     forbidden_exception,
     not_found_exception,
     internal_server_exception,
+    conflict_exception,
+    bad_request_exception,
 )
+from app.schemas.auth import AdminCodeUpdateRequest, AdminPasswordUpdateRequest
 from app.core.errors import DuplicateError
 from app.core.security import create_access_token, create_refresh_token
 from app.data.auth import AuthDataSQLAlchemy
@@ -116,3 +119,44 @@ class AuthService:
 
     async def get_students_by_group(self, group_id: int) -> list[User]:
         return await self.repository.get_all_by_field("group_id", group_id)
+
+    def _require_teacher_password(self, user: User, password: str) -> None:
+        if user.role < UserRoleEnum.TEACHER:
+            raise forbidden_exception("Only admin have access this action")
+        if not user.password_hash or not verify_password(password, user.password_hash):
+            raise unauthorized_exception("Incorrect password or code")
+
+    async def update_admin_code(
+        self, user: User, data: AdminCodeUpdateRequest
+    ) -> User:
+        self._require_teacher_password(user, data.current_password)
+        new_code = data.code.strip()
+        if not new_code:
+            raise bad_request_exception("Login cannot be empty")
+
+        if user.code != new_code:
+            existing = await self.repository.get_by_field("code", new_code)
+            if existing is not None and existing.id != user.id:
+                raise conflict_exception("Login is already taken")
+            try:
+                updated = await self.repository.update_user(user.id, {"code": new_code})
+            except DuplicateError:
+                raise conflict_exception("Login is already taken")
+            if updated is None:
+                raise not_found_exception("User not found")
+            loaded = await self.repository.get_by_id(user.id)
+            return loaded or updated
+        return user
+
+    async def update_admin_password(
+        self, user: User, data: AdminPasswordUpdateRequest
+    ) -> User:
+        self._require_teacher_password(user, data.current_password)
+        updated = await self.repository.update_user(
+            user.id,
+            {"password_hash": hash_password(data.new_password)},
+        )
+        if updated is None:
+            raise not_found_exception("User not found")
+        loaded = await self.repository.get_by_id(user.id)
+        return loaded or updated

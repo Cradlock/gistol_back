@@ -58,6 +58,8 @@ class AnswerResponse(BaseModel):
     text: str
     status: StudentAnswerStatus
     submitted_at: datetime
+    student_name: str | None = None
+    group_title: str | None = None
 
     class Config:
         from_attributes = True

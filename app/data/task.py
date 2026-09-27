@@ -111,6 +111,7 @@ class TaskDataSQLAlchemy:
 
         query = (
             select(StudentAnswerTask)
+            .options(selectinload(StudentAnswerTask.user).selectinload(User.group))
             .where(StudentAnswerTask.task_id == task_id)
             .order_by(StudentAnswerTask.id)
         )
@@ -122,7 +123,10 @@ class TaskDataSQLAlchemy:
     async def get_answer(self, answer_id: int) -> StudentAnswerTask | None:
         query = (
             select(StudentAnswerTask)
-            .options(selectinload(StudentAnswerTask.task))
+            .options(
+                selectinload(StudentAnswerTask.task),
+                selectinload(StudentAnswerTask.user).selectinload(User.group),
+            )
             .where(StudentAnswerTask.id == answer_id)
         )
         result = await self.db.execute(query)
@@ -198,6 +202,8 @@ class TaskDataSQLAlchemy:
                     .values(scores=func.greatest(0, User.scores + delta))
                 )
             await self.db.commit()
-            await self.db.refresh(answer)
 
-        return answer
+        reloaded = await self.get_answer(answer_id)
+        if reloaded is None:
+            raise NotFoundError("Answer not found")
+        return reloaded

@@ -7,6 +7,7 @@ from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.models.base import Base
 from app.models.groups import Group
+from app.models.user import User
 
 
 class StudentAnswerStatus(str, enum.Enum):
@@ -64,3 +65,4 @@ class StudentAnswerTask(Base):
     )
 
     task: Mapped[SituationsTask] = relationship(back_populates="answers")
+    user: Mapped[User] = relationship()

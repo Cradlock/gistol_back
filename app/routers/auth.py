@@ -1,8 +1,18 @@
 from fastapi import APIRouter, Depends
 
-from app.dependencies import get_auth_service, get_current_refresh_user, get_current_user
+from app.dependencies import get_auth_service, get_current_refresh_user, get_current_teacher
 from app.models.user import User
-from app.schemas.auth import AdminLoginRequest, AdminLoginResponse, CompleteUserRequest, RefreshTokenRequest, RefreshTokenResponse,TelegramAuthRequest, TelegramAuthResponse,UserResponse
+from app.schemas.auth import (
+    AdminCodeUpdateRequest,
+    AdminLoginRequest,
+    AdminLoginResponse,
+    AdminPasswordUpdateRequest,
+    AdminProfileResponse,
+    RefreshTokenResponse,
+    TelegramAuthRequest,
+    TelegramAuthResponse,
+    UserResponse,
+)
 from app.services.auth import AuthService
 
 
@@ -45,6 +55,31 @@ async def admin_login(
     service: AuthService = Depends(get_auth_service) 
 ):
     return await service.login_by_code(data.code,data.password)
+
+
+@router.get("/admin/me", response_model=AdminProfileResponse)
+async def admin_me(user: User = Depends(get_current_teacher)):
+    return AdminProfileResponse.model_validate(user)
+
+
+@router.patch("/admin/code", response_model=AdminProfileResponse)
+async def update_admin_code(
+    data: AdminCodeUpdateRequest,
+    user: User = Depends(get_current_teacher),
+    service: AuthService = Depends(get_auth_service),
+):
+    updated = await service.update_admin_code(user, data)
+    return AdminProfileResponse.model_validate(updated)
+
+
+@router.patch("/admin/password", response_model=AdminProfileResponse)
+async def update_admin_password(
+    data: AdminPasswordUpdateRequest,
+    user: User = Depends(get_current_teacher),
+    service: AuthService = Depends(get_auth_service),
+):
+    updated = await service.update_admin_password(user, data)
+    return AdminProfileResponse.model_validate(updated)
 
 
 

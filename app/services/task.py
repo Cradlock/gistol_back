@@ -20,6 +20,40 @@ from app.schemas.task import (
 )
 
 
+def _student_name(user: User | None, user_id: int) -> str:
+    if user is None:
+        return f"#{user_id}"
+    fio = (getattr(user, "fio", None) or "").strip()
+    if fio:
+        return fio
+    parts = [part for part in (user.name, user.surname) if part]
+    if parts:
+        return " ".join(parts)
+    if user.telegram_username:
+        return f"@{user.telegram_username}"
+    return f"#{user_id}"
+
+
+def _group_title(user: User | None) -> str | None:
+    if user is None or user.group is None:
+        return None
+    return user.group.title
+
+
+def to_answer_response(answer: StudentAnswerTask) -> AnswerResponse:
+    user = getattr(answer, "user", None)
+    return AnswerResponse(
+        id=answer.id,
+        user_id=answer.user_id,
+        task_id=answer.task_id,
+        text=answer.text,
+        status=answer.status,
+        submitted_at=answer.submitted_at,
+        student_name=_student_name(user, answer.user_id),
+        group_title=_group_title(user),
+    )
+
+
 class TaskService:
     def __init__(self, repo: TaskDataSQLAlchemy):
         self.repo = repo
@@ -137,13 +171,14 @@ class TaskService:
             raise not_found_exception("Task not found")
         return AnswerListResponse(
             total=total,
-            answers=[AnswerResponse.model_validate(answer) for answer in answers],
+            answers=[to_answer_response(answer) for answer in answers],
         )
 
     async def review_answer(
         self, answer_id: int, status: StudentAnswerStatus
-    ) -> StudentAnswerTask:
+    ) -> AnswerResponse:
         try:
-            return await self.repo.review_answer(answer_id, status)
+            answer = await self.repo.review_answer(answer_id, status)
         except NotFoundError:
             raise not_found_exception("Answer not found")
+        return to_answer_response(answer)
