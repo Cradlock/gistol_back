@@ -2,12 +2,37 @@ from datetime import datetime
 import enum
 from typing import final
 
-from sqlalchemy import DateTime, Enum, ForeignKey, String, UniqueConstraint, func
+from sqlalchemy import (
+    Column,
+    DateTime,
+    Enum,
+    ForeignKey,
+    String,
+    Table,
+    UniqueConstraint,
+    func,
+)
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.models.base import Base
 from app.models.groups import Group
 from app.models.user import User
+
+
+situation_task_groups = Table(
+    "situation_task_groups",
+    Base.metadata,
+    Column(
+        "task_id",
+        ForeignKey("situations_task.id", ondelete="CASCADE"),
+        primary_key=True,
+    ),
+    Column(
+        "group_id",
+        ForeignKey("groups.id", ondelete="CASCADE"),
+        primary_key=True,
+    ),
+)
 
 
 class StudentAnswerStatus(str, enum.Enum):
@@ -23,13 +48,15 @@ class SituationsTask(Base):
     id: Mapped[int] = mapped_column(primary_key=True)
     title: Mapped[str] = mapped_column(String(255))
     content: Mapped[str] = mapped_column(String(4000))
-    group_id: Mapped[int] = mapped_column(ForeignKey("groups.id"), index=True)
 
     start_at: Mapped[datetime] = mapped_column(DateTime(timezone=True))
     end_at: Mapped[datetime] = mapped_column(DateTime(timezone=True))
     points: Mapped[int] = mapped_column()
 
-    group: Mapped[Group] = relationship()
+    groups: Mapped[list[Group]] = relationship(
+        secondary=situation_task_groups,
+        lazy="selectin",
+    )
     answers: Mapped[list["StudentAnswerTask"]] = relationship(
         back_populates="task",
         cascade="all, delete-orphan",

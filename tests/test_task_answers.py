@@ -2,8 +2,12 @@ from datetime import datetime, timezone
 from types import SimpleNamespace
 import unittest
 
+from pydantic import ValidationError
+
 from app.models.task import StudentAnswerStatus
-from app.services.task import to_answer_response
+from app.models.years import Year
+from app.schemas.task import TaskCreate
+from app.services.task import to_answer_response, to_task_response
 
 
 class TaskAnswerResponseTests(unittest.TestCase):
@@ -44,3 +48,52 @@ class TaskAnswerResponseTests(unittest.TestCase):
 
         self.assertEqual(payload["student_name"], "#12")
         self.assertIsNone(payload["group_title"])
+
+
+class TaskGroupsResponseTests(unittest.TestCase):
+    def test_task_response_lists_all_groups(self):
+        now = datetime(2026, 9, 27, tzinfo=timezone.utc)
+        task = SimpleNamespace(
+            id=4,
+            title="Задача",
+            content="Текст",
+            start_at=now,
+            end_at=now,
+            points=3,
+            groups=[
+                SimpleNamespace(
+                    id=1,
+                    title="БПИ-231",
+                    year=Year.FIRST,
+                    is_active=True,
+                    created_date=now,
+                ),
+                SimpleNamespace(
+                    id=2,
+                    title="БПИ-232",
+                    year=Year.FIRST,
+                    is_active=True,
+                    created_date=now,
+                ),
+            ],
+        )
+
+        payload = to_task_response(task).model_dump()
+
+        self.assertEqual(payload["group_ids"], [1, 2])
+        self.assertEqual(
+            [group["title"] for group in payload["groups"]],
+            ["БПИ-231", "БПИ-232"],
+        )
+
+    def test_create_requires_at_least_one_group(self):
+        now = datetime(2026, 9, 27, tzinfo=timezone.utc)
+        with self.assertRaises(ValidationError):
+            TaskCreate(
+                title="Задача",
+                content="Текст",
+                group_ids=[],
+                start_at=now,
+                end_at=now,
+                points=1,
+            )

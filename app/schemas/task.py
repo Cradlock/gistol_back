@@ -3,18 +3,22 @@ from datetime import datetime
 from pydantic import BaseModel, Field, model_validator
 
 from app.models.task import StudentAnswerStatus
+from app.schemas.group import GroupResponse
 
 
 class TaskCreate(BaseModel):
     title: str = Field(..., min_length=2, max_length=255)
     content: str = Field(..., min_length=1, max_length=4000)
-    group_id: int
+    group_ids: list[int] = Field(..., min_length=1)
     start_at: datetime
     end_at: datetime
     points: int = Field(..., ge=1)
 
     @model_validator(mode="after")
-    def validate_dates(self):
+    def validate_payload(self):
+        self.group_ids = list(dict.fromkeys(self.group_ids))
+        if not self.group_ids:
+            raise ValueError("Нужна хотя бы одна группа")
         if self.end_at <= self.start_at:
             raise ValueError("Дата конца должна быть позже даты начала")
         return self
@@ -23,23 +27,29 @@ class TaskCreate(BaseModel):
 class TaskUpdate(BaseModel):
     title: str | None = Field(default=None, min_length=2, max_length=255)
     content: str | None = Field(default=None, min_length=1, max_length=4000)
-    group_id: int | None = None
+    group_ids: list[int] | None = Field(default=None, min_length=1)
     start_at: datetime | None = None
     end_at: datetime | None = None
     points: int | None = Field(default=None, ge=1)
+
+    @model_validator(mode="after")
+    def validate_groups(self):
+        if self.group_ids is not None:
+            self.group_ids = list(dict.fromkeys(self.group_ids))
+            if not self.group_ids:
+                raise ValueError("Нужна хотя бы одна группа")
+        return self
 
 
 class TaskResponse(BaseModel):
     id: int
     title: str
     content: str
-    group_id: int
+    group_ids: list[int]
+    groups: list[GroupResponse] = Field(default_factory=list)
     start_at: datetime
     end_at: datetime
     points: int
-
-    class Config:
-        from_attributes = True
 
 
 class TaskListResponse(BaseModel):

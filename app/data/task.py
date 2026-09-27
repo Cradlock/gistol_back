@@ -16,19 +16,27 @@ class TaskDataSQLAlchemy:
         self.db = db
 
     async def get_by_id(self, task_id: int) -> SituationsTask | None:
-        query = select(SituationsTask).where(SituationsTask.id == task_id)
+        query = (
+            select(SituationsTask)
+            .options(selectinload(SituationsTask.groups))
+            .where(SituationsTask.id == task_id)
+        )
         result = await self.db.execute(query)
         return result.scalar_one_or_none()
 
     async def list_by_group(self, group_id: int | None) -> tuple[list[SituationsTask], int]:
-        query = select(SituationsTask)
+        filters = []
         if group_id is not None:
-            query = query.where(SituationsTask.group_id == group_id)
-        query = query.order_by(SituationsTask.start_at.desc())
-
-        count_query = select(func.count()).select_from(query.subquery())
+            filters.append(SituationsTask.groups.any(Group.id == group_id))
+        count_query = select(func.count()).select_from(SituationsTask).where(*filters)
         total = (await self.db.execute(count_query)).scalar_one()
-        tasks = list((await self.db.execute(query)).scalars().all())
+        query = (
+            select(SituationsTask)
+            .options(selectinload(SituationsTask.groups))
+            .where(*filters)
+            .order_by(SituationsTask.start_at.desc())
+        )
+        tasks = list((await self.db.execute(query)).scalars().unique().all())
         return tasks, total
 
     async def list_available_for_student(
@@ -47,53 +55,63 @@ class TaskDataSQLAlchemy:
             )
             .exists()
         )
-        base_query = select(SituationsTask).where(
-            SituationsTask.group_id == group_id,
+        filters = [
+            SituationsTask.groups.any(Group.id == group_id),
             SituationsTask.start_at <= now,
             SituationsTask.end_at > now,
             ~already_answered,
-        )
-        count_query = select(func.count()).select_from(base_query.subquery())
+        ]
+        count_query = select(func.count()).select_from(SituationsTask).where(*filters)
         total = (await self.db.execute(count_query)).scalar_one()
         query = (
-            base_query.order_by(SituationsTask.end_at.asc(), SituationsTask.id.asc())
+            select(SituationsTask)
+            .options(selectinload(SituationsTask.groups))
+            .where(*filters)
+            .order_by(SituationsTask.end_at.asc(), SituationsTask.id.asc())
             .offset((page - 1) * page_size)
             .limit(page_size)
         )
-        tasks = list((await self.db.execute(query)).scalars().all())
+        tasks = list((await self.db.execute(query)).scalars().unique().all())
         return tasks, total
 
-    async def _ensure_group(self, group_id: int) -> None:
-        group = await self.db.get(Group, group_id)
-        if group is None:
+    async def _get_groups(self, group_ids: list[int]) -> list[Group]:
+        unique_ids = list(dict.fromkeys(group_ids))
+        result = await self.db.execute(select(Group).where(Group.id.in_(unique_ids)))
+        groups = list(result.scalars().all())
+        if len(groups) != len(unique_ids):
             raise NotFoundError("Group not found")
+        by_id = {group.id: group for group in groups}
+        return [by_id[group_id] for group_id in unique_ids]
 
     @handle_integrity_error
     async def create(self, data: dict) -> SituationsTask:
-        await self._ensure_group(data["group_id"])
+        groups = await self._get_groups(data.pop("group_ids"))
         task = SituationsTask(**data)
+        task.groups = groups
         self.db.add(task)
         await self.db.commit()
-        await self.db.refresh(task)
-        return task
+        reloaded = await self.get_by_id(task.id)
+        if reloaded is None:
+            raise NotFoundError("Task not found")
+        return reloaded
 
     @handle_integrity_error
     async def partial_update(self, task_id: int, update_data: dict) -> SituationsTask:
-        if "group_id" in update_data:
-            await self._ensure_group(update_data["group_id"])
-
-        query = (
-            update(SituationsTask)
-            .where(SituationsTask.id == task_id)
-            .values(**update_data)
-            .returning(SituationsTask)
-        )
-        result = await self.db.execute(query)
-        await self.db.commit()
-        task = result.scalar_one_or_none()
+        task = await self.get_by_id(task_id)
         if task is None:
             raise NotFoundError("Task not found")
-        return task
+
+        group_ids = update_data.pop("group_ids", None)
+        if group_ids is not None:
+            task.groups = await self._get_groups(group_ids)
+        for key, value in update_data.items():
+            setattr(task, key, value)
+
+        await self.db.commit()
+        reloaded = await self.get_by_id(task_id)
+        if reloaded is None:
+            raise NotFoundError("Task not found")
+        return reloaded
 
     @handle_integrity_error
     async def delete(self, task_id: int) -> None:

@@ -10,6 +10,7 @@ from app.core.exceptions import (
 from app.data.task import TaskDataSQLAlchemy
 from app.models.task import SituationsTask, StudentAnswerStatus, StudentAnswerTask
 from app.models.user import User
+from app.schemas.group import GroupResponse
 from app.schemas.task import (
     AnswerListResponse,
     AnswerHistoryListResponse,
@@ -40,6 +41,20 @@ def _group_title(user: User | None) -> str | None:
     return user.group.title
 
 
+def to_task_response(task: SituationsTask) -> TaskResponse:
+    groups = list(getattr(task, "groups", None) or [])
+    return TaskResponse(
+        id=task.id,
+        title=task.title,
+        content=task.content,
+        group_ids=[group.id for group in groups],
+        groups=[GroupResponse.model_validate(group) for group in groups],
+        start_at=task.start_at,
+        end_at=task.end_at,
+        points=task.points,
+    )
+
+
 def to_answer_response(answer: StudentAnswerTask) -> AnswerResponse:
     user = getattr(answer, "user", None)
     return AnswerResponse(
@@ -58,17 +73,18 @@ class TaskService:
     def __init__(self, repo: TaskDataSQLAlchemy):
         self.repo = repo
 
-    async def create_task(self, data: dict) -> SituationsTask:
+    async def create_task(self, data: dict) -> TaskResponse:
         try:
-            return await self.repo.create(data)
+            task = await self.repo.create(data)
         except NotFoundError:
             raise not_found_exception("Group not found")
+        return to_task_response(task)
 
     async def list_tasks(self, group_id: int | None) -> TaskListResponse:
         tasks, total = await self.repo.list_by_group(group_id)
         return TaskListResponse(
             total=total,
-            tasks=[TaskResponse.model_validate(task) for task in tasks],
+            tasks=[to_task_response(task) for task in tasks],
         )
 
     async def list_available_tasks(
@@ -85,7 +101,7 @@ class TaskService:
         )
         return TaskListResponse(
             total=total,
-            tasks=[TaskResponse.model_validate(task) for task in tasks],
+            tasks=[to_task_response(task) for task in tasks],
         )
 
     async def submit_answer(
@@ -96,7 +112,8 @@ class TaskService:
             raise not_found_exception("Task not found")
         if user.group_id is None:
             raise bad_request_exception("Student group is not assigned")
-        if task.group_id != user.group_id:
+        task_group_ids = {group.id for group in (task.groups or [])}
+        if user.group_id not in task_group_ids:
             raise forbidden_exception("Task belongs to another group")
 
         now = datetime.now(timezone.utc)
@@ -134,19 +151,19 @@ class TaskService:
             ],
         )
 
-    async def get_task(self, task_id: int) -> SituationsTask:
+    async def get_task(self, task_id: int) -> TaskResponse:
         task = await self.repo.get_by_id(task_id)
         if task is None:
             raise not_found_exception("Task not found")
-        return task
+        return to_task_response(task)
 
-    async def update_task(self, task_id: int, update_data: dict) -> SituationsTask:
+    async def update_task(self, task_id: int, update_data: dict) -> TaskResponse:
         task = await self.repo.get_by_id(task_id)
         if task is None:
             raise not_found_exception("Task not found")
 
         if not update_data:
-            return task
+            return to_task_response(task)
 
         start_at = update_data.get("start_at", task.start_at)
         end_at = update_data.get("end_at", task.end_at)
@@ -154,9 +171,10 @@ class TaskService:
             raise bad_request_exception("Дата конца должна быть позже даты начала")
 
         try:
-            return await self.repo.partial_update(task_id, update_data)
+            updated = await self.repo.partial_update(task_id, update_data)
         except NotFoundError as exc:
             raise not_found_exception(exc.message)
+        return to_task_response(updated)
 
     async def delete_task(self, task_id: int) -> None:
         try:
