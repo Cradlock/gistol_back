@@ -42,8 +42,9 @@ class ExamService:
         return datetime.now(timezone.utc)
 
     @staticmethod
-    def _deadline(exam) -> datetime:
-        return exam.start_at + timedelta(minutes=exam.duration_minutes)
+    def _deadline(exam, started_at: datetime | None = None) -> datetime:
+        origin = started_at or exam.start_at
+        return origin + timedelta(minutes=exam.duration_minutes)
 
     @staticmethod
     def _question(question, teacher: bool = True):
@@ -236,7 +237,7 @@ class ExamService:
         now = self._now()
         if not await self.repo.is_exam_available(exam_id, user):
             raise forbidden_exception("Exam is not targeted to this student")
-        if now < exam.start_at or now >= self._deadline(exam):
+        if now < exam.start_at:
             raise bad_request_exception("Exam is not available at this time")
         existing = await self.repo.get_session_for_user_exam(user.id, exam_id)
         if existing is not None:
@@ -247,7 +248,7 @@ class ExamService:
                 exam_id=exam.id,
                 status=existing.status,
                 started_at=existing.started_at,
-                deadline=self._deadline(exam),
+                deadline=self._deadline(exam, existing.started_at),
             )
         try:
             session = await self.repo.create_session(user.id, exam_id, now)
@@ -258,7 +259,7 @@ class ExamService:
             exam_id=exam.id,
             status=session.status,
             started_at=session.started_at,
-            deadline=self._deadline(exam),
+            deadline=self._deadline(exam, session.started_at),
         )
 
     async def _owned_active_session(self, session_id: int, user: User):
@@ -269,7 +270,7 @@ class ExamService:
             raise forbidden_exception("Exam session belongs to another student")
         if session.status != ExamSessionStatus.STARTED:
             raise conflict_exception("Exam session is no longer editable")
-        if self._now() >= self._deadline(session.exam):
+        if self._now() >= self._deadline(session.exam, session.started_at):
             raise bad_request_exception("Exam deadline has passed")
         return session
 
@@ -281,7 +282,7 @@ class ExamService:
             exam_id=exam.id,
             status=session.status,
             started_at=session.started_at,
-            deadline=self._deadline(exam),
+            deadline=self._deadline(exam, session.started_at),
             title=exam.title,
             theme=exam.theme,
             questions=[self._question(q, teacher=False) for q in exam.questions],

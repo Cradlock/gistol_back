@@ -229,8 +229,6 @@ class ExamDataSQLAlchemy:
         base = select(Exam).where(
             target_exists,
             ~finished_exists,
-            Exam.start_at <= now,
-            Exam.start_at + Exam.duration_minutes * func.make_interval(0, 0, 0, 0, 0, 1) > now,
         )
         total = (await self.db.execute(select(func.count()).select_from(base.subquery()))).scalar_one()
         result = await self.db.execute(

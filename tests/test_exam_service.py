@@ -84,11 +84,20 @@ class ExamServiceTests(unittest.IsolatedAsyncioTestCase):
             await self.service.start_session(3, self.user)
         self.assertEqual(raised.exception.status_code, 403)
 
-    async def test_start_rejects_exam_outside_fixed_window(self):
-        self.repo.exam = exam_at(datetime.now(timezone.utc) - timedelta(hours=2))
+    async def test_start_rejects_exam_before_start(self):
+        self.repo.exam = exam_at(datetime.now(timezone.utc) + timedelta(hours=1))
         with self.assertRaises(HTTPException) as raised:
             await self.service.start_session(3, self.user)
         self.assertEqual(raised.exception.status_code, 400)
+
+    async def test_start_allows_exam_after_scheduled_window(self):
+        now = datetime.now(timezone.utc)
+        self.repo.exam = exam_at(now - timedelta(hours=2))
+
+        response = await self.service.start_session(3, self.user)
+
+        self.assertEqual(response.id, 9)
+        self.assertGreaterEqual(response.deadline, now + timedelta(minutes=59))
 
     async def test_start_rejects_duplicate_session(self):
         now = datetime.now(timezone.utc)
